@@ -59,6 +59,7 @@ export default function ImportPage() {
   const [log, setLog] = useState<{ text: string; ok: boolean }[]>([]);
   const [working, setWorking] = useState(false);
   const [note, setNote] = useState("");
+  const [extractMode, setExtractMode] = useState<"live" | "demo" | null>(null);
 
   const months = useMemo(() => Array.from(new Set(found.map((f) => f.month))).sort().reverse(), [found]);
   const chosen = useMemo(() => found.filter((f) => month === "all" || f.month === month), [found, month]);
@@ -103,7 +104,8 @@ export default function ImportPage() {
     for (const f of batch) {
       try {
         const file = new File([f.data as unknown as BlobPart], f.name, { type: mimeFor(f.name) });
-        const { bill: e } = await extractFile(file);
+        const { mode: m, bill: e } = await extractFile(file);
+        setExtractMode(m);
         const bill: Bill = {
           id: crypto.randomUUID(),
           clientId: selected,
@@ -163,6 +165,13 @@ export default function ImportPage() {
           />
         </label>
       </div>
+
+      {extractMode === "demo" && (
+        <div className="banner" style={{ marginTop: 16 }}>
+          Demo extraction is on, so supplier names and amounts are made-up sample data, not read from your documents.
+          Add ANTHROPIC_API_KEY in Vercel (Settings, Environment Variables), then redeploy, to read real documents.
+        </div>
+      )}
 
       {note && <div className="banner" style={{ marginTop: 16 }}>{note}</div>}
 
