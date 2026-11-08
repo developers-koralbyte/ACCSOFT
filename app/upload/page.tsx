@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useDocflow } from "@/lib/store";
 import { toBillFields } from "@/lib/malaysia";
-import type { Bill, ExtractedBill } from "@/lib/types";
+import { extractFile } from "@/lib/client";
+import type { Bill } from "@/lib/types";
 
 export default function UploadPage() {
-  const { state, update } = useDocflow();
+  const { state, update, mode: appMode } = useDocflow();
   const [clientId, setClientId] = useState("");
   const [over, setOver] = useState(false);
   const [log, setLog] = useState<{ text: string; ok: boolean }[]>([]);
@@ -23,13 +24,8 @@ export default function UploadPage() {
     setLog([]);
     for (const file of list) {
       try {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/extract", { method: "POST", body: form });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Extraction failed");
-        setMode(json.mode);
-        const e = json.bill as ExtractedBill;
+        const { mode: extractMode, bill: e } = await extractFile(file);
+        setMode(extractMode);
         const bill: Bill = {
           id: crypto.randomUUID(),
           clientId: selected,
@@ -56,7 +52,9 @@ export default function UploadPage() {
     <main className="page">
       <h1>Add documents</h1>
       <p className="sub">
-        Drop receipts and invoices here. In real use, clients send these on WhatsApp and they land in the same queue.
+        {appMode === "business"
+          ? "Drop receipts, bills and invoices here, or import a whole WhatsApp chat in one go. Nothing gets lost in the chat again."
+          : "Drop receipts and invoices here. In real use, clients send these on WhatsApp and they land in the same queue."}
       </p>
 
       {mode === "demo" && (
@@ -65,14 +63,16 @@ export default function UploadPage() {
         </div>
       )}
 
-      <div className="row">
-        <div>
-          <label>Client these documents belong to</label>
-          <select value={selected} onChange={(e) => setClientId(e.target.value)}>
-            {state.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+      {appMode === "firm" && (
+        <div className="row">
+          <div>
+            <label>Client these documents belong to</label>
+            <select value={selected} onChange={(e) => setClientId(e.target.value)}>
+              {state.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         className={`drop ${over ? "over" : ""}`}

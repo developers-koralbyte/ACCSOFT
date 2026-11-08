@@ -27,6 +27,7 @@ export interface Bill {
   source: Source;
   status: BillStatus;
   fileName?: string;
+  sentBy?: string; // who sent the document in the WhatsApp chat, when known
   postedRef?: string;
 }
 

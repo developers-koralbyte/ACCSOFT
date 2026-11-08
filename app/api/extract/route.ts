@@ -11,8 +11,9 @@ export async function POST(req: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file received" }, { status: 400 });
     }
-    if (file.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: "File is larger than 8 MB" }, { status: 413 });
+    // Vercel rejects request bodies over about 4.5 MB, so keep a safe margin
+    if (file.size > 4 * 1024 * 1024) {
+      return NextResponse.json({ error: "File is larger than 4 MB. Try a smaller photo or a screenshot." }, { status: 413 });
     }
     if (hasLiveExtraction()) {
       const bill = await liveExtract(file);

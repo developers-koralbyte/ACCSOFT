@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useDocflow } from "@/lib/store";
 import { ACCOUNTS, TAX_CODES, flagsFor, money } from "@/lib/malaysia";
+import { billsToCsv, downloadCsv } from "@/lib/csv";
 import type { Bill } from "@/lib/types";
 
 const SOURCE_LABEL: Record<Bill["source"], string> = {
@@ -12,14 +13,15 @@ const SOURCE_LABEL: Record<Bill["source"], string> = {
 };
 
 export default function InboxPage() {
-  const { state, update } = useDocflow();
+  const { state, update, mode } = useDocflow();
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!state) return <main className="page">Loading...</main>;
 
   const pending = state.bills.filter((b) => b.status === "pending");
-  const posted = state.bills.filter((b) => b.status === "posted");
+  const posted = state.bills.filter((b) => b.status !== "pending");
+  const business = mode === "business";
   const clientName = (id: string) => state.clients.find((c) => c.id === id)?.name ?? "Unknown client";
 
   function patch(id: string, fields: Partial<Bill>) {
@@ -37,6 +39,11 @@ export default function InboxPage() {
   }
 
   async function approve(bill: Bill) {
+    if (business) {
+      // SMEs keep their own records: approving files the document, no accounting software needed
+      patch(bill.id, { status: "approved" });
+      return;
+    }
     setBusy(bill.id);
     setErrors((e) => ({ ...e, [bill.id]: "" }));
     try {
@@ -59,8 +66,9 @@ export default function InboxPage() {
     <main className="page">
       <h1>Review queue</h1>
       <p className="sub">
-        Every document is read and coded for you. Check the figures, then approve. Bills go into Xero as drafts so you
-        keep final control.
+        {business
+          ? "Every document is read and sorted for you. Check the figures, then approve to file it. Export everything to CSV for your accountant any time."
+          : "Every document is read and coded for you. Check the figures, then approve. Bills go into Xero as drafts so you keep final control."}
       </p>
 
       {pending.length === 0 && <div className="card empty">Nothing waiting. Add documents or wait for clients to send them.</div>}
@@ -73,7 +81,8 @@ export default function InboxPage() {
               <div>
                 <h3>{b.supplier || "Unknown supplier"}</h3>
                 <div className="bill-meta">
-                  {clientName(b.clientId)} | via {SOURCE_LABEL[b.source]}
+                  {business ? "" : `${clientName(b.clientId)} | `}via {SOURCE_LABEL[b.source]}
+                  {b.sentBy ? ` from ${b.sentBy}` : ""}
                   {b.fileName ? ` | ${b.fileName}` : ""} | confidence {Math.round(b.confidence * 100)}%
                 </div>
               </div>
@@ -113,7 +122,7 @@ export default function InboxPage() {
                 Reject
               </button>
               <button className="btn green" disabled={busy === b.id} onClick={() => approve(b)}>
-                {busy === b.id ? "Posting..." : "Approve and post to Xero"}
+                {business ? "Approve" : busy === b.id ? "Posting..." : "Approve and post to Xero"}
               </button>
             </div>
           </div>
@@ -122,17 +131,24 @@ export default function InboxPage() {
 
       {posted.length > 0 && (
         <>
-          <h2 style={{ marginTop: 36, fontSize: 18 }}>Posted</h2>
+          <div className="section-head">
+            <h2 style={{ fontSize: 18 }}>{business ? "Filed" : "Posted"}</h2>
+            {business && (
+              <button className="btn secondary" onClick={() => downloadCsv("docflow-documents.csv", billsToCsv(posted))}>
+                Export CSV
+              </button>
+            )}
+          </div>
           <div className="card" style={{ padding: 0 }}>
             <table>
-              <thead><tr><th>Client</th><th>Supplier</th><th>Total</th><th>Reference</th></tr></thead>
+              <thead><tr><th>{business ? "Date" : "Client"}</th><th>Supplier</th><th>Total</th><th>{business ? "Status" : "Reference"}</th></tr></thead>
               <tbody>
                 {posted.map((b) => (
                   <tr key={b.id}>
-                    <td>{clientName(b.clientId)}</td>
+                    <td>{business ? b.date : clientName(b.clientId)}</td>
                     <td>{b.supplier}</td>
                     <td>{money(b.total, b.currency)}</td>
-                    <td><span className="tag ok">{b.postedRef}</span></td>
+                    <td><span className="tag ok">{b.status === "posted" ? b.postedRef : "Approved"}</span></td>
                   </tr>
                 ))}
               </tbody>

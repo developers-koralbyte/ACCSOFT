@@ -37,11 +37,13 @@ a:hover { text-decoration: underline; }
   align-items: center;
   gap: 28px;
   padding: 0 28px;
-  height: 58px;
+  min-height: 58px;
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 .brand { font-weight: 700; letter-spacing: 0.2px; font-size: 17px; color: #fff; }
 .brand small { font-weight: 500; opacity: 0.6; margin-left: 8px; font-size: 12px; }
-.nav { display: flex; gap: 6px; flex: 1; }
+.nav { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
 .nav a { color: #cbd8e8; padding: 8px 14px; border-radius: 8px; font-weight: 500; }
 .nav a:hover { background: rgba(255,255,255,0.08); text-decoration: none; color: #fff; }
 .nav a.active { background: rgba(255,255,255,0.14); color: #fff; }
@@ -143,3 +145,10 @@ input, select {
 .log { margin-top: 16px; font-size: 14px; }
 .log div { padding: 4px 0; }
 .err { color: var(--bad); }
+
+.mode-toggle { display: inline-flex; border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; overflow: hidden; }
+.mode-toggle button { background: transparent; color: #fff; border: none; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; opacity: 0.7; }
+.mode-toggle button.on { background: rgba(255,255,255,0.2); opacity: 1; }
+.section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 32px 0 12px; }
+.section-head h2 { margin: 0; }
+.cta { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }

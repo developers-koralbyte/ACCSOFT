@@ -44,3 +44,17 @@ const bills: Bill[] = [
 export function seedState(): AppState {
   return { clients, bills };
 }
+
+// Demo data for the "My business" mode: one business, documents that arrived over WhatsApp.
+export function seedBusinessState(): AppState {
+  const mine: Client = { id: "me", name: "My business", phone: "", docsExpected: 0, docsReceived: 6 };
+  const list: Bill[] = [
+    { ...mk("m1", "me", "Petronas Dagangan Berhad", "PDB-9921307", "2026-11-02", 120.0, 0, "Fuel for delivery van", "whatsapp", 0.93), sentBy: "Ahmad (driver)" },
+    { ...mk("m2", "me", "Shopee Malaysia", "SPE-MY-8120456", "2026-11-03", 412.8, 33.02, "Commission and service fees", "whatsapp", 0.81), sentBy: "Siti" },
+    { ...mk("m3", "me", "Unifi Business (Telekom Malaysia)", "", "2026-11-04", 199.0, 15.92, "Business broadband monthly", "whatsapp", 0.66), sentBy: "Siti" },
+    { ...mk("m4", "me", "Mr DIY (M) Sdn Bhd", "MRD-55120", "2026-10-30", 86.5, 0, "Packing tape and office supplies", "whatsapp", 0.94), sentBy: "Ahmad (driver)", status: "approved" },
+    { ...mk("m5", "me", "Tenaga Nasional Berhad", "TNB-90311-10", "2026-10-28", 980.4, 0, "Electricity bill October 2026", "whatsapp", 0.97), sentBy: "Siti", status: "approved" },
+    { ...mk("m6", "me", "Grab Malaysia", "GRB-771902", "2026-10-27", 54.0, 0, "Delivery rides", "whatsapp", 0.9), sentBy: "Ahmad (driver)", status: "posted", postedRef: "DEMO-ZK31" },
+  ];
+  return { clients: [mine], bills: list };
+}

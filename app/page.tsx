@@ -1,6 +1,7 @@
 "use client";
 
-import { useDocflow } from "@/lib/store";
+import { useEffect } from "react";
+import { readMode, useDocflow } from "@/lib/store";
 
 function reminderText(clientName: string, missing: number): string {
   return (
@@ -12,6 +13,11 @@ function reminderText(clientName: string, missing: number): string {
 
 export default function ClientsPage() {
   const { state, update, reset } = useDocflow();
+
+  // SMEs using "My business" mode land on their own dashboard instead of the firm client list
+  useEffect(() => {
+    if (readMode() === "business") window.location.replace("/business");
+  }, []);
 
   if (!state) return <main className="page">Loading...</main>;
 
