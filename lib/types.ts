@@ -1,5 +1,8 @@
 import type { Statement } from "./statements/types";
 import type { LineDecision, ModelSuggestion, PayeeMemory } from "./match/types";
+import type { ActivityEntry } from "./activity";
+import type { ChaseRecord, HistoryItem, Lang, QuestionRecord } from "./chase/types";
+import type { MonthRecord } from "./month/types";
 
 export type Source = "whatsapp" | "upload" | "email";
 export type BillStatus = "pending" | "approved" | "posted";
@@ -11,6 +14,7 @@ export interface Client {
   docsExpected: number; // documents expected this month
   docsReceived: number;
   lastReminder?: string;
+  language?: Lang; // language for WhatsApp messages, English when not set
 }
 
 export interface Bill {
@@ -54,4 +58,9 @@ export interface AppState {
   decisions: Record<string, LineDecision>; // a person's actions on bank lines, keyed statementId:lineId
   memory: PayeeMemory; // payee memory per client
   modelSuggestions: ModelSuggestion[];
+  questions: Record<string, QuestionRecord>; // sent questions, keyed statementId:lineId
+  history: HistoryItem[]; // what clients sent in earlier months
+  chases: Record<string, ChaseRecord>; // missing-document chases, keyed clientId:month
+  months: Record<string, MonthRecord>; // per client and month: waived documents, acknowledgements, sign-off, snapshot
+  activity: ActivityEntry[];
 }

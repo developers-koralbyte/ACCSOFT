@@ -190,16 +190,21 @@ describe("Reconciled", () => {
     const docs2 = [bill("b", "Bintang Stationery", "", "2026-10-01", 913, { account: "Office supplies" })];
     const first = run([sugg], docs2).results.get("s1:l1")!;
     expect(first.category).toBe("Office supplies"); // arrives with a proposed category and tax code
-    const accepted = run([sugg], docs2, { decisions: acceptSuggestion({}, first, first.category, first.taxCode) });
+    const accepted = run([sugg], docs2, { decisions: acceptSuggestion({}, first, first.category, first.taxCode, "Aisyah Rahman", "2026-11-13T02:00:00Z") });
     expect(accepted.results.get("s1:l1")!.state).toBe("matched");
     expect(accepted.results.get("s1:l1")!.rule).toBe("accepted");
+    // an accepted suggestion stays visibly different from a rule match, and remembers where it came from
+    expect(accepted.results.get("s1:l1")!.accepted).toEqual({ by: "Aisyah Rahman", at: "2026-11-13T02:00:00Z", origin: first.ruleLabel });
+    expect(accepted.results.get("s1:l1")!.ruleLabel).toBe("Accepted by you");
+    expect(first.ruleLabel).toContain("Suggested");
     const rejected = run([sugg], docs2, { decisions: rejectSuggestion({}, first) });
     expect(rejected.results.get("s1:l1")!.state).toBe("unexplained");
   });
   it("a person can link a document to an unexplained line", () => {
     const x = stmt("s1", OPEN, [{ date: "2026-10-25", desc: "MYSTERY", debit: 91300 }]);
-    const r = run([x], [bill("b", "Anyone", "", "2026-01-01", 913)], { decisions: linkDocument({}, "s1:l1", "b", "Office supplies", "NONE") });
-    expect(r.results.get("s1:l1")).toMatchObject({ state: "matched", rule: "accepted", billIds: ["b"] });
+    const r = run([x], [bill("b", "Anyone", "", "2026-01-01", 913)], { decisions: linkDocument({}, "s1:l1", "b", "Office supplies", "NONE", "Aisyah Rahman") });
+    expect(r.results.get("s1:l1")).toMatchObject({ state: "matched", rule: "linked", billIds: ["b"] });
+    expect(r.results.get("s1:l1")!.accepted?.by).toBe("Aisyah Rahman");
   });
 });
 

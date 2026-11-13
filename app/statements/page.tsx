@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useDocflow } from "@/lib/store";
+import { useDocflow, useStaff } from "@/lib/store";
+import { addActivity } from "@/lib/activity";
+import { useQueryParam } from "@/lib/useQuery";
+import { isMonthLocked } from "@/lib/month/records";
+import type { Act } from "../answer-flow";
 import { fmtDate, fmtRM, monthName, monthOf, parseSen, senToPlain } from "@/lib/money";
 import { proveStatement, correctLine } from "@/lib/statements/proof";
 import { checkContinuity } from "@/lib/statements/continuity";
@@ -46,7 +50,9 @@ function toneOf(p: ProofResult): "ok" | "bad" | "amber" {
 
 export default function StatementsPage() {
   const { state, update, mode } = useDocflow();
+  const staff = useStaff();
   const [clientId, setClientId] = useState("");
+  const [qClient, setQClient] = useQueryParam("client");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState(false);
@@ -62,7 +68,7 @@ export default function StatementsPage() {
       .catch(() => setLive(false));
   }, []);
 
-  const selected = state ? (mode === "business" ? "me" : clientId || state.clients[0]?.id || "") : "";
+  const selected = state ? (mode === "business" ? "me" : clientId || qClient || state.clients[0]?.id || "") : "";
   const mine = useMemo(
     () =>
       (state?.statements ?? [])
@@ -96,6 +102,9 @@ export default function StatementsPage() {
 
   const clientName = (id: string) => state.clients.find((c) => c.id === id)?.name ?? "this client";
   const say = (text: string, level: Msg["level"] = "info") => setMsgs((m) => [...m, { text, level }]);
+
+  // One update that changes data and writes the activity log entry for it.
+  const act: Act = (kind, text, fn, month) => update((st) => addActivity(fn(st), { clientId: selected, month, by: staff.name, kind, text }));
 
   async function pdfjs() {
     if (!pdfjsRef.current) pdfjsRef.current = await loadBrowserPdfjs();
@@ -135,7 +144,19 @@ export default function StatementsPage() {
         say(dup, "info");
         return;
       }
-      update((s) => ({ ...s, statements: [...s.statements, stmt] }));
+      if (isMonthLocked(state!, item.clientId, monthOf(stmt.periodEnd))) {
+        say(`${monthName(monthOf(stmt.periodEnd))} is approved and locked for ${clientName(item.clientId)}. Reopen the month to add or replace a statement.`, "error");
+        return;
+      }
+      update((s) =>
+        addActivity({ ...s, statements: [...s.statements, stmt] }, {
+          clientId: item.clientId,
+          month: monthOf(stmt.periodEnd),
+          by: staff.name,
+          kind: "statement-added",
+          text: `Added statement ${stmt.fileName}: account ending ${stmt.accountLast4}, ${stmt.lines.length} lines`,
+        }),
+      );
       setOpen((o) => new Set(o).add(stmt.id));
       if (item.clientId !== selected) setClientId(item.clientId);
       const p = proveStatement(stmt);
@@ -192,8 +213,12 @@ export default function StatementsPage() {
     await ingest(p, pw);
   }
 
-  function patchStatement(id: string, fn: (s: Statement) => Statement) {
-    update((st) => ({ ...st, statements: st.statements.map((s) => (s.id === id ? fn(s) : s)) }));
+  function patchStatement(id: string, fn: (s: Statement) => Statement, log?: string) {
+    const target = state!.statements.find((x) => x.id === id);
+    update((st) => {
+      const next = { ...st, statements: st.statements.map((x) => (x.id === id ? fn(x) : x)) };
+      return log && target ? addActivity(next, { clientId: target.clientId, month: monthOf(target.periodEnd), by: staff.name, kind: "correction", text: log }) : next;
+    });
   }
 
   return (
@@ -208,7 +233,7 @@ export default function StatementsPage() {
         <div className="row">
           <div>
             <label>Client</label>
-            <select value={selected} onChange={(e) => setClientId(e.target.value)}>
+            <select value={selected} onChange={(e) => { setClientId(e.target.value); setQClient(e.target.value); }}>
               {state.clients.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -311,22 +336,32 @@ export default function StatementsPage() {
             stmt={s}
             expanded={open.has(s.id)}
             toggle={() => setOpen((o) => { const n = new Set(o); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })}
-            patch={(fn) => patchStatement(s.id, fn)}
+            patch={(fn, log) => patchStatement(s.id, fn, log)}
+            locked={isMonthLocked(state, s.clientId, monthOf(s.periodEnd))}
             remove={() =>
-              update((st) => ({
-                ...st,
-                statements: st.statements.filter((x) => x.id !== s.id),
-                decisions: Object.fromEntries(Object.entries(st.decisions).filter(([k]) => !k.startsWith(`${s.id}:`))),
-              }))
+              update((st) =>
+                addActivity(
+                  {
+                    ...st,
+                    statements: st.statements.filter((x) => x.id !== s.id),
+                    decisions: Object.fromEntries(Object.entries(st.decisions).filter(([k]) => !k.startsWith(`${s.id}:`))),
+                  },
+                  { clientId: s.clientId, month: monthOf(s.periodEnd), by: staff.name, kind: "statement-removed", text: `Removed statement ${s.fileName}` },
+                ),
+              )
             }
             matching={{
               clientId: selected,
+              month: monthOf(s.periodEnd),
               bills: state.bills.filter((b) => b.clientId === selected),
               recon,
               decisions: state.decisions,
               memory: state.memory,
               live,
+              by: staff.name,
+              locked: isMonthLocked(state, s.clientId, monthOf(s.periodEnd)),
               update,
+              act,
             }}
           />
         ))
@@ -342,13 +377,15 @@ function StatementCard({
   toggle,
   patch,
   remove,
+  locked,
   matching,
 }: {
   stmt: Statement;
   expanded: boolean;
   toggle: () => void;
-  patch: (fn: (s: Statement) => Statement) => void;
+  patch: (fn: (s: Statement) => Statement, log?: string) => void;
   remove: () => void;
+  locked: boolean;
   matching: Omit<React.ComponentProps<typeof Matching>, "stmt">;
 }) {
   const proof = useMemo(() => proveStatement(stmt), [stmt]);
@@ -373,7 +410,9 @@ function StatementCard({
     if (debit === null || credit === null || debit < 0 || credit < 0) return setEditErr("Enter amounts like 1250.00");
     if (debit > 0 && credit > 0) return setEditErr("A line is either money in or money out, not both.");
     const side = credit > 0 ? "credit" : "debit";
-    patch((s) => ({ ...s, lines: correctLine(s.lines, editing.id, side, side === "credit" ? credit : debit) }));
+    const lineNo = stmt.lines.findIndex((x) => x.id === editing.id) + 1;
+    const newAmount = side === "credit" ? credit : debit;
+    patch((s) => ({ ...s, lines: correctLine(s.lines, editing.id, side, newAmount) }), `Corrected line ${lineNo} of ${stmt.fileName} to ${side === "credit" ? "money in" : "money out"} ${fmtRM(newAmount)}`);
     setEditing(null);
     setEditErr("");
   }
@@ -491,7 +530,7 @@ function StatementCard({
                               <button className="linkbtn" onClick={() => { setEditing(null); setEditErr(""); }}>Cancel</button>
                             </>
                           ) : (
-                            <button className="linkbtn" onClick={() => { setEditing({ id: l.id, debit: l.debit ? senToPlain(l.debit) : "", credit: l.credit ? senToPlain(l.credit) : "" }); setEditErr(""); }}>Edit</button>
+                            <button className="linkbtn" disabled={locked} onClick={() => { setEditing({ id: l.id, debit: l.debit ? senToPlain(l.debit) : "", credit: l.credit ? senToPlain(l.credit) : "" }); setEditErr(""); }}>Edit</button>
                           )}
                         </td>
                       </tr>
@@ -505,7 +544,7 @@ function StatementCard({
                                 {b!.implied && (
                                   <>
                                     {" "}The printed balance implies {b!.implied.side === "debit" ? "money out" : "money in"} of {fmtRM(b!.implied.amount)}.{" "}
-                                    <button className="linkbtn" onClick={() => patch((s) => ({ ...s, lines: correctLine(s.lines, l.id, b!.implied!.side, b!.implied!.amount) }))}>
+                                    <button className="linkbtn" disabled={locked} onClick={() => patch((s) => ({ ...s, lines: correctLine(s.lines, l.id, b!.implied!.side, b!.implied!.amount) }), `Corrected line ${b!.lineNo} of ${stmt.fileName} to ${b!.implied!.side === "credit" ? "money in" : "money out"} ${fmtRM(b!.implied!.amount)} (amount implied by the printed balance)`)}>
                                       Use {fmtRM(b!.implied.amount)}
                                     </button>
                                   </>
@@ -525,8 +564,8 @@ function StatementCard({
           <Matching stmt={stmt} {...matching} />
 
           <div className="actions" style={{ marginTop: 12, justifyContent: "space-between" }}>
-            <span className="bill-meta">The proof re-runs after every correction.</span>
-            <button className="btn secondary" onClick={() => { if (confirm("Remove this statement from the demo?")) remove(); }}>Remove statement</button>
+            <span className="bill-meta">{locked ? "This month is approved and locked. Reopen it to change this statement." : "The proof re-runs after every correction."}</span>
+            <button className="btn secondary" disabled={locked} title={locked ? "Approved and locked" : undefined} onClick={() => { if (confirm("Remove this statement from the demo?")) remove(); }}>Remove statement</button>
           </div>
         </div>
       )}

@@ -1,14 +1,34 @@
 import type { AppState, Bill, Client } from "./types";
+import type { HistoryItem, Lang } from "./chase/types";
 
 // Every name, number and amount in this file is invented sample data.
 
+const lang = (l: Lang) => l;
 const clients: Client[] = [
-  { id: "c1", name: "Seri Murni Trading Sdn Bhd", phone: "60100000001", docsExpected: 42, docsReceived: 31 },
-  { id: "c2", name: "Lotus Kitchen Enterprise", phone: "60100000002", docsExpected: 28, docsReceived: 28 },
-  { id: "c3", name: "BlueRiver Logistics Sdn Bhd", phone: "60100000003", docsExpected: 55, docsReceived: 22 },
-  { id: "c4", name: "Kenanga Design Studio", phone: "60100000004", docsExpected: 18, docsReceived: 12 },
-  { id: "c5", name: "Harmoni Dental Clinic", phone: "60100000005", docsExpected: 34, docsReceived: 34 },
-  { id: "c6", name: "Pixel Orchard Sdn Bhd", phone: "60100000006", docsExpected: 25, docsReceived: 9 },
+  { id: "c1", name: "Seri Murni Trading Sdn Bhd", phone: "60100000001", docsExpected: 42, docsReceived: 31, language: lang("en") },
+  { id: "c2", name: "Lotus Kitchen Enterprise", phone: "60100000002", docsExpected: 28, docsReceived: 28, language: lang("ms") },
+  { id: "c3", name: "BlueRiver Logistics Sdn Bhd", phone: "60100000003", docsExpected: 55, docsReceived: 22, language: lang("en") },
+  { id: "c4", name: "Kenanga Design Studio", phone: "60100000004", docsExpected: 18, docsReceived: 12, language: lang("en") },
+  { id: "c5", name: "Harmoni Dental Clinic", phone: "60100000005", docsExpected: 34, docsReceived: 34, language: lang("zh") },
+  { id: "c6", name: "Pixel Orchard Sdn Bhd", phone: "60100000006", docsExpected: 25, docsReceived: 9, language: lang("ms") },
+];
+
+// What each client sent in earlier months, so the missing-documents chaser has something to compare against.
+// In a real build this comes from the document store.
+function hist(clientId: string, months: string[], kinds: string[]): HistoryItem[] {
+  return months.flatMap((month) => kinds.map((kind) => ({ clientId, month, kind, label: kind })));
+}
+const EARLIER = ["2026-07", "2026-08", "2026-09"];
+const history: HistoryItem[] = [
+  ...hist("c1", EARLIER, ["Rent", "Utilities", "Bank statement"]),
+  ...hist("c1", ["2026-10"], ["Utilities"]),
+  ...hist("c2", EARLIER, ["Utilities", "Bank statement"]),
+  ...hist("c3", EARLIER, ["Rent", "Bank statement"]),
+  ...hist("c3", ["2026-10"], ["Rent"]),
+  ...hist("c4", EARLIER, ["Rent", "Bank statement"]),
+  ...hist("c5", EARLIER, ["Utilities", "Telephone and internet", "Bank statement"]),
+  ...hist("c5", ["2026-10"], ["Utilities", "Telephone and internet"]),
+  ...hist("c6", EARLIER, ["Rent", "Utilities", "Bank statement"]),
 ];
 
 function mk(
@@ -69,11 +89,11 @@ const bills: Bill[] = [
 ];
 
 function emptyExtras() {
-  return { statements: [], decisions: {}, memory: {}, modelSuggestions: [] };
+  return { statements: [], decisions: {}, memory: {}, modelSuggestions: [], questions: {}, history: [], chases: {}, months: {}, activity: [] };
 }
 
 export function seedState(): AppState {
-  return { clients, bills, ...emptyExtras() };
+  return { clients, bills, ...emptyExtras(), history };
 }
 
 // "My business" mode starts with a few clearly labelled sample documents so the screens are not empty.

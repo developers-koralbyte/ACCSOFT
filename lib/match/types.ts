@@ -1,8 +1,22 @@
 // Matching types. Amounts are integer sen. Matching results are derived; only decisions, memory and
 // model suggestions are stored.
 
-export type LineState = "matched" | "suggested" | "bank-only" | "unexplained";
+export type LineState = "matched" | "suggested" | "bank-only" | "unexplained" | "answered";
 export type RuleId = "reference" | "payee-7d" | "single-3d" | "accepted" | "linked";
+
+// A client's answer to a question about a line, recorded by the accountant. Kept for the audit trail.
+export interface LineAnswer {
+  text?: string;
+  by: string;
+  at: string;
+}
+
+// Who accepted a suggestion (or chose a document) and what it was before they did.
+export interface AcceptedInfo {
+  by: string;
+  at: string;
+  origin: string;
+}
 
 // A person's action on one bank line. Never created automatically.
 export interface LineDecision {
@@ -14,6 +28,9 @@ export interface LineDecision {
   categoryConfirmed?: boolean; // a person confirmed the category and tax code
   learned?: boolean; // filled from the payee memory after the person approved applying it
   rejected?: string[]; // document ids the person rejected as a suggestion for this line
+  answer?: LineAnswer; // the client's answer, when the line was asked about
+  by?: string; // who made this decision
+  origin?: string; // what the line was before the decision, for example the suggestion that was accepted
   at: string;
 }
 
@@ -60,6 +77,8 @@ export interface LineResult {
   learned: boolean;
   bankOnlyLabel?: string;
   memoryKey: string;
+  accepted?: AcceptedInfo;
+  answer?: LineAnswer;
 }
 
 export interface StatementSummary {

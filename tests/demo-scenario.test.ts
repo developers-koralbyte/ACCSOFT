@@ -25,13 +25,13 @@ describe("the sample demo shows all four states", () => {
     const r = reconcileClient({ statements: [sep, oct], bills, decisions: {}, memory: {} });
 
     const o = r.summaries.get("oct")!;
-    expect(o.counts).toEqual({ matched: 5, suggested: 1, "bank-only": 7, unexplained: 2 });
+    expect(o.counts).toEqual({ matched: 5, suggested: 1, "bank-only": 7, unexplained: 2, answered: 0 });
     const rules = oct.lines.map((l) => r.results.get(`oct:${l.id}`)!).filter((x) => x.state === "matched").map((x) => x.rule);
     expect(rules.sort()).toEqual(["payee-7d", "reference", "reference", "reference", "single-3d"]);
     expect(o.reconciled).toBe(false);
 
     const s = r.summaries.get("sep")!;
-    expect(s.counts).toEqual({ matched: 4, suggested: 1, "bank-only": 7, unexplained: 1 });
+    expect(s.counts).toEqual({ matched: 4, suggested: 1, "bank-only": 7, unexplained: 1, answered: 0 });
   });
 
   it("each document is used once across both months, and Cahaya Printing stays unpaid", async () => {

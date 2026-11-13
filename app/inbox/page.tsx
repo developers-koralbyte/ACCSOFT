@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useDocflow } from "@/lib/store";
-import { ACCOUNTS, TAX_CODES, flagsFor, money } from "@/lib/malaysia";
+import { ACCOUNTS, flagsFor, money } from "@/lib/malaysia";
+import { taxOptionsFor } from "@/lib/tax";
 import { billsToCsv, downloadCsv } from "@/lib/csv";
 import { fmtDate } from "@/lib/money";
 import type { Bill } from "@/lib/types";
@@ -105,7 +106,7 @@ export default function InboxPage() {
               <div>
                 <label>Tax code</label>
                 <select value={b.taxCode} onChange={(e) => patch(b.id, { taxCode: e.target.value })}>
-                  {TAX_CODES.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
+                  {taxOptionsFor(b.date, b.taxCode).map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                 </select>
               </div>
               <div><label>Description</label><input value={b.description} onChange={(e) => patch(b.id, { description: e.target.value })} /></div>

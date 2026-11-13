@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppState } from "./types";
 import { seedBusinessState, seedState } from "./demo";
+import { SELF, STAFF, staffById, type Staff } from "./staff";
 
 export type Mode = "firm" | "business";
 
@@ -63,6 +64,11 @@ function normalise(raw: Partial<AppState>, mode: Mode): AppState {
     decisions: raw.decisions ?? {},
     memory: raw.memory ?? {},
     modelSuggestions: raw.modelSuggestions ?? [],
+    questions: raw.questions ?? {},
+    history: raw.history ?? [],
+    chases: raw.chases ?? {},
+    months: raw.months ?? {},
+    activity: raw.activity ?? [],
   };
 }
 
@@ -113,4 +119,37 @@ export function useDocflow() {
   }, []);
 
   return { state, update, reset, mode };
+}
+
+// ---------- who is acting (demo staff switch) ----------
+const STAFF_KEY = "docflow-staff";
+
+export function readStaff(): Staff {
+  try {
+    if (readMode() === "business") return SELF;
+    return staffById(window.localStorage.getItem(STAFF_KEY) ?? STAFF[0].id);
+  } catch {
+    return STAFF[0];
+  }
+}
+
+export function writeStaff(id: string) {
+  try {
+    window.localStorage.setItem(STAFF_KEY, id);
+  } catch {
+    /* ignore */
+  }
+  announce();
+}
+
+// The person acting right now. Follows the switch in the top bar.
+export function useStaff(): Staff {
+  const [staff, setStaff] = useState<Staff>(STAFF[0]);
+  useEffect(() => {
+    const read = () => setStaff(readStaff());
+    read();
+    window.addEventListener(DATA_EVENT, read);
+    return () => window.removeEventListener(DATA_EVENT, read);
+  }, []);
+  return staff;
 }

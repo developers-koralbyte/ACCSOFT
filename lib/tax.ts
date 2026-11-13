@@ -63,3 +63,19 @@ export function suggestTaxCodeOn(tax: number, subtotal: number, date: string): s
   }
   return bestDiff < 0.012 ? best : "NONE";
 }
+
+export interface TaxOption {
+  code: string;
+  label: string;
+  valid: boolean;
+}
+
+// The tax codes to offer for a document or bank line dated `date`: only codes in force that day. If the item already
+// carries a code that was not valid on its date, it is kept at the end and flagged, so nothing silently changes.
+export function taxOptionsFor(date: string, current?: string): TaxOption[] {
+  const options: TaxOption[] = codesOn(date).map((r) => ({ code: r.code, label: r.label, valid: true }));
+  if (current && !options.some((o) => o.code === current)) {
+    options.push({ code: current, label: `${labelFor(current)} (not valid on this date)`, valid: false });
+  }
+  return options;
+}

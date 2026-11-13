@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DATA_EVENT, hasSampleData, readMode, writeMode, type Mode } from "@/lib/store";
+import { DATA_EVENT, hasSampleData, readMode, useStaff, writeMode, writeStaff, type Mode } from "@/lib/store";
+import { STAFF } from "@/lib/staff";
 
 interface Status {
   configured: boolean;
@@ -17,6 +18,7 @@ export default function Nav() {
   const [mode, setMode] = useState<Mode>("firm");
   const [live, setLive] = useState<boolean | null>(null);
   const [samples, setSamples] = useState(true);
+  const staff = useStaff();
 
   useEffect(() => {
     setMode(readMode());
@@ -66,6 +68,7 @@ export default function Nav() {
         {mode === "firm" ? link("/", "Clients") : link("/business", "My documents")}
         {link("/inbox", "Review queue")}
         {link("/statements", "Bank statements")}
+        {link("/questions", "Client questions")}
         {link("/upload", "Add documents")}
         {link("/import", "Import WhatsApp chat")}
       </nav>
@@ -73,6 +76,14 @@ export default function Nav() {
         <span className="demo-badge" title="Sample suppliers, clients and amounts are invented. Nothing here is a real result.">
           Demo: sample data
         </span>
+      )}
+      {mode === "firm" && (
+        <label className="staff-switch" style={{ margin: 0 }}>
+          Acting as
+          <select aria-label="Acting as" value={staff.id} onChange={(e) => writeStaff(e.target.value)}>
+            {STAFF.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </label>
       )}
       <div className="mode-toggle" role="group" aria-label="Who is using DocFlow">
         <button className={mode === "firm" ? "on" : ""} onClick={() => choose("firm")}>Accounting firm</button>

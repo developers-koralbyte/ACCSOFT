@@ -31,7 +31,7 @@ export const RULE_LABELS: Record<RuleId, string> = {
   reference: "Rule 1: exact amount and invoice reference in the bank description",
   "payee-7d": "Rule 2: exact amount and payee name, within 7 days",
   "single-3d": "Rule 3: exact amount, only one candidate, within 3 days",
-  accepted: "Suggestion accepted by you",
+  accepted: "Accepted by you",
   linked: "Document chosen by you",
 };
 
@@ -92,18 +92,30 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
       const linked = d.billIds.map((id) => billById.get(id)).filter((b): b is Bill => Boolean(b));
       if (linked.length) {
         if (!d.partial) linked.forEach((b) => consumed.add(b.id));
-        results.set(item.key, build(item, "matched", memory, decisions, {
-          rule: d.partial ? "linked" : "accepted",
-          ruleLabel: d.partial ? "Part payment accepted by you" : RULE_LABELS.accepted,
+        const answered = Boolean(d.answer);
+        const rule: RuleId = d.partial || !d.origin || d.origin === "Document chosen by you" ? "linked" : "accepted";
+        const ruleLabel = answered
+          ? "Answered by the client, with a document from the queue"
+          : d.partial
+            ? "Part payment accepted"
+            : d.origin === "Document chosen by you"
+              ? RULE_LABELS.linked
+              : RULE_LABELS.accepted;
+        const r = build(item, answered ? "answered" : "matched", memory, decisions, {
+          rule,
+          ruleLabel,
           bills: linked,
-          reason: `Accepted by you: ${linked.map(describeBill).join(", ")}.`,
+          reason: answered ? `Answered: ${d.answer?.text ? `"${d.answer.text}", ` : ""}document ${linked.map(describeBill).join(", ")}.` : `Accepted: ${linked.map(describeBill).join(", ")}.`,
           partial: d.partial,
-        }));
+        });
+        if (!answered && d.by) r.accepted = { by: d.by, at: d.at, origin: d.origin ?? "" };
+        if (answered) r.answer = d.answer;
+        results.set(item.key, r);
       }
     }
   }
 
-  const open = () => items.filter((i) => !results.has(i.key) && i.line.debit > 0 && !decisions[i.key]?.bankOnly);
+  const open = () => items.filter((i) => !results.has(i.key) && i.line.debit > 0 && !decisions[i.key]?.bankOnly && !decisions[i.key]?.answer);
   const free = (b: Bill) => !consumed.has(b.id);
   const exact = (b: Bill, i: Item) => toSen(b.total) === i.line.debit;
   const nearest = (cands: Bill[], i: Item) =>
@@ -181,6 +193,17 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
   for (const item of items) {
     if (results.has(item.key)) continue;
     const side = item.line.debit > 0 ? "debit" : "credit";
+    const dec = decisions[item.key];
+    if (dec?.answer) {
+      const r = build(item, "answered", memory, decisions, {
+        ruleLabel: "Answered by the client",
+        reason: `Answered: "${dec.answer.text ?? ""}"`,
+        bankCategory: dec.category,
+      });
+      r.answer = dec.answer;
+      results.set(item.key, r);
+      continue;
+    }
     const hit = decisions[item.key]?.bankOnly ? { category: decisions[item.key]?.category ?? "General expenses", label: "Marked bank only by you" } : classifyBankOnly(item.line.description, side);
     if (hit) {
       results.set(item.key, build(item, "bank-only", memory, decisions, {
@@ -202,7 +225,7 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
   for (const s of ordered) {
     if (summaries.has(s.id)) continue;
     const mine = s.lines.map((l) => results.get(lineKey(s.id, l.id))).filter((r): r is LineResult => Boolean(r));
-    const counts = { matched: 0, suggested: 0, "bank-only": 0, unexplained: 0 };
+    const counts = { matched: 0, suggested: 0, "bank-only": 0, unexplained: 0, answered: 0 };
     mine.forEach((r) => counts[r.state]++);
     const toConfirm = mine.filter((r) => r.state === "bank-only" && !r.categoryConfirmed).length;
     const totalsOnly = proveStatement(s).status === "totals-only";
@@ -228,7 +251,7 @@ function emptySummary(statementId: string, blocked: "break" | "incomplete"): Sta
     statementId,
     blocked,
     totalsOnly: false,
-    counts: { matched: 0, suggested: 0, "bank-only": 0, unexplained: 0 },
+    counts: { matched: 0, suggested: 0, "bank-only": 0, unexplained: 0, answered: 0 },
     bankOnlyToConfirm: 0,
     reconciled: false,
     outstanding: [blocked === "break" ? "Fix the break first" : "Enter the opening and closing balance first"],
@@ -310,12 +333,11 @@ function build(
     source = "memory";
     learned = true;
   }
-  let confirmed = false;
+  let confirmed = Boolean(d?.categoryConfirmed);
   if (d?.category !== undefined || d?.taxCode !== undefined) {
     category = d.category ?? category;
     taxCode = d.taxCode ?? taxCode;
     source = "you";
-    confirmed = Boolean(d.categoryConfirmed);
     learned = Boolean(d.learned);
   }
 

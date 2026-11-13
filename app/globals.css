@@ -194,3 +194,12 @@ input, select {
 
 /* ---------- demo badge ---------- */
 .demo-badge { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+
+/* ---------- accepted, answered, board, sign-off ---------- */
+.tag.accepted { background: #dbeafe; color: #1d4ed8; }
+.tag.answered { background: #ede9fe; color: #6d28d9; }
+a.tag { cursor: pointer; }
+a.tag:hover { text-decoration: none; filter: brightness(0.96); }
+.staff-switch { display: inline-flex; align-items: center; gap: 6px; color: #cbd8e8; font-size: 13px; }
+.staff-switch select { width: auto; padding: 4px 8px; font-size: 13px; }
+.msg { background: #f1f5f9; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; font-family: inherit; font-size: 14px; margin: 0; }

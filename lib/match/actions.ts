@@ -7,10 +7,10 @@ import type { LineDecision, LineResult, MemoryEntry, PayeeMemory } from "./types
 type Decisions = Record<string, LineDecision>;
 const now = () => new Date().toISOString();
 
-export function acceptSuggestion(decisions: Decisions, r: LineResult, category: string, taxCode: string): Decisions {
+export function acceptSuggestion(decisions: Decisions, r: LineResult, category: string, taxCode: string, by: string, at = now()): Decisions {
   return {
     ...decisions,
-    [r.key]: { ...decisions[r.key], billIds: r.billIds, partial: r.partial, category, taxCode, categoryConfirmed: true, at: now() },
+    [r.key]: { ...decisions[r.key], billIds: r.billIds, partial: r.partial, category, taxCode, categoryConfirmed: true, by, origin: r.ruleLabel, at },
   };
 }
 
@@ -19,12 +19,26 @@ export function rejectSuggestion(decisions: Decisions, r: LineResult): Decisions
   return { ...decisions, [r.key]: { ...prev, rejected: Array.from(new Set([...(prev?.rejected ?? []), ...r.billIds])), at: now() } };
 }
 
-export function linkDocument(decisions: Decisions, key: string, billId: string, category: string, taxCode: string): Decisions {
-  return { ...decisions, [key]: { ...decisions[key], billIds: [billId], bankOnly: false, category, taxCode, categoryConfirmed: true, at: now() } };
+export function linkDocument(decisions: Decisions, key: string, billId: string, category: string, taxCode: string, by: string, at = now()): Decisions {
+  return { ...decisions, [key]: { ...decisions[key], billIds: [billId], bankOnly: false, category, taxCode, categoryConfirmed: true, by, origin: "Document chosen by you", at } };
 }
 
-export function markBankOnly(decisions: Decisions, key: string, category: string, taxCode: string): Decisions {
-  return { ...decisions, [key]: { ...decisions[key], bankOnly: true, category, taxCode, categoryConfirmed: true, at: now() } };
+// Records a client's answer by linking a document from the queue. Category and tax code come from the document.
+export function answerWithDocument(decisions: Decisions, key: string, billId: string, text: string | undefined, by: string, at = now()): Decisions {
+  const prev = decisions[key];
+  return {
+    ...decisions,
+    [key]: { ...prev, billIds: [billId], bankOnly: false, category: undefined, taxCode: undefined, categoryConfirmed: true, answer: { text, by, at }, by, origin: "Answered by the client", at },
+  };
+}
+
+// Records a text-only answer. The category and tax code are confirmed separately through recordAnswer.
+export function answerWithText(decisions: Decisions, key: string, text: string, category: string, taxCode: string, by: string, at = now()): Decisions {
+  return { ...decisions, [key]: { ...decisions[key], answer: { text, by, at }, category, taxCode, categoryConfirmed: true, by, at } };
+}
+
+export function markBankOnly(decisions: Decisions, key: string, category: string, taxCode: string, by = "", at = now()): Decisions {
+  return { ...decisions, [key]: { ...decisions[key], bankOnly: true, category, taxCode, categoryConfirmed: true, by, at } };
 }
 
 export function undoDecision(decisions: Decisions, key: string): Decisions {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TAX_RATES, codesOn, isValidOn, rateOn, suggestTaxCodeOn } from "@/lib/tax";
+import { TAX_RATES, codesOn, isValidOn, rateOn, suggestTaxCodeOn, taxOptionsFor } from "@/lib/tax";
 import { suggestTaxCode, TAX_CODES } from "@/lib/malaysia";
 
 describe("date aware tax table", () => {
@@ -31,5 +31,18 @@ describe("date aware tax table", () => {
   it("the review queue still gets the same code list and behaviour", () => {
     expect(TAX_CODES.map((c) => c.code)).toEqual(["NONE", "SVC6", "SVC8", "ST10", "ST5"]);
     expect(suggestTaxCode(15.92, 199, "2026-10-05")).toBe("SVC8");
+  });
+});
+
+describe("tax dropdown options", () => {
+  it("lists only codes in force on the document date", () => {
+    expect(taxOptionsFor("2024-02-29").map((o) => o.code)).toEqual(["NONE", "SVC6", "ST10", "ST5"]);
+    expect(taxOptionsFor("2026-10-05").map((o) => o.code)).toContain("SVC8");
+  });
+  it("keeps an existing out-of-date code, flagged, so nothing silently changes", () => {
+    const o = taxOptionsFor("2023-06-01", "SVC8");
+    expect(o[o.length - 1]).toMatchObject({ code: "SVC8", valid: false });
+    expect(o[o.length - 1].label).toContain("not valid on this date");
+    expect(taxOptionsFor("2026-10-05", "SVC8").every((x) => x.valid)).toBe(true);
   });
 });
