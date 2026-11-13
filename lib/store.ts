@@ -8,8 +8,8 @@ export type Mode = "firm" | "business";
 
 const MODE_KEY = "docflow-mode";
 const KEYS: Record<Mode, string> = {
-  firm: "docflow-state-v2",
-  business: "docflow-business-v2",
+  firm: "docflow-state-v3",
+  business: "docflow-business-v3",
 };
 
 export function readMode(): Mode {
@@ -28,6 +28,27 @@ export function writeMode(mode: Mode) {
   }
 }
 
+// Lets screens that stay mounted (the top bar) hear about data changes made elsewhere in the same tab.
+export const DATA_EVENT = "docflow-data";
+function announce() {
+  try {
+    window.dispatchEvent(new Event(DATA_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
+// True when the saved data for a mode still holds sample items (sample documents or sample statements).
+export function hasSampleData(mode: Mode): boolean {
+  try {
+    const raw = window.localStorage.getItem(KEYS[mode]);
+    const st = raw ? (JSON.parse(raw) as Partial<AppState>) : seed(mode);
+    return Boolean(st.bills?.some((b) => b.sample) || st.statements?.some((x) => x.kind === "sample"));
+  } catch {
+    return true;
+  }
+}
+
 function seed(mode: Mode): AppState {
   return mode === "business" ? seedBusinessState() : seedState();
 }
@@ -39,6 +60,9 @@ function normalise(raw: Partial<AppState>, mode: Mode): AppState {
     clients: raw.clients ?? base.clients,
     bills: raw.bills ?? base.bills,
     statements: raw.statements ?? [],
+    decisions: raw.decisions ?? {},
+    memory: raw.memory ?? {},
+    modelSuggestions: raw.modelSuggestions ?? [],
   };
 }
 
@@ -72,6 +96,7 @@ export function useDocflow() {
       } catch {
         /* storage unavailable, keep in memory */
       }
+      setTimeout(announce, 0);
       return next;
     });
   }, []);
@@ -84,6 +109,7 @@ export function useDocflow() {
       /* ignore */
     }
     setState(fresh);
+    announce();
   }, []);
 
   return { state, update, reset, mode };

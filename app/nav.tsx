@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { readMode, writeMode, type Mode } from "@/lib/store";
+import { DATA_EVENT, hasSampleData, readMode, writeMode, type Mode } from "@/lib/store";
 
 interface Status {
   configured: boolean;
@@ -15,10 +15,27 @@ export default function Nav() {
   const path = usePathname();
   const [status, setStatus] = useState<Status | null>(null);
   const [mode, setMode] = useState<Mode>("firm");
+  const [live, setLive] = useState<boolean | null>(null);
+  const [samples, setSamples] = useState(true);
 
   useEffect(() => {
     setMode(readMode());
+    fetch("/api/statements/page")
+      .then((r) => r.json())
+      .then((j) => setLive(Boolean(j.live)))
+      .catch(() => setLive(false));
   }, []);
+
+  // Follow data changes made on the page (for example Clear samples) without a reload.
+  useEffect(() => {
+    const check = () => setSamples(hasSampleData(readMode()));
+    check();
+    window.addEventListener(DATA_EVENT, check);
+    return () => window.removeEventListener(DATA_EVENT, check);
+  }, [path]);
+
+  // Shown while the app runs on seeded data or demo extraction: the firm demo always uses seeded clients.
+  const demo = mode === "firm" || live === false || samples;
 
   useEffect(() => {
     fetch("/api/xero/status")
@@ -52,6 +69,11 @@ export default function Nav() {
         {link("/upload", "Add documents")}
         {link("/import", "Import WhatsApp chat")}
       </nav>
+      {demo && (
+        <span className="demo-badge" title="Sample suppliers, clients and amounts are invented. Nothing here is a real result.">
+          Demo: sample data
+        </span>
+      )}
       <div className="mode-toggle" role="group" aria-label="Who is using DocFlow">
         <button className={mode === "firm" ? "on" : ""} onClick={() => choose("firm")}>Accounting firm</button>
         <button className={mode === "business" ? "on" : ""} onClick={() => choose("business")}>My business</button>

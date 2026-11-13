@@ -9,6 +9,9 @@ import { ingestPdf, type LivePage } from "@/lib/statements/ingest";
 import { loadBrowserPdfjs, PdfPasswordError } from "@/lib/statements/pdf";
 import { duplicateMessage, toStatement } from "@/lib/statements/build";
 import type { ProofResult, Statement, StatementKind } from "@/lib/statements/types";
+import { yearEndSummaries } from "@/lib/statements/yearend";
+import { reconcileClient } from "@/lib/match/engine";
+import Matching from "./matching";
 import expected from "@/data/sample-expected.json";
 
 const GUARANTEE =
@@ -68,6 +71,18 @@ export default function StatementsPage() {
     [state, selected],
   );
   const issues = useMemo(() => checkContinuity(mine), [mine]);
+  const yearEnd = useMemo(() => yearEndSummaries(mine), [mine]);
+  const recon = useMemo(
+    () =>
+      reconcileClient({
+        statements: mine,
+        bills: (state?.bills ?? []).filter((b) => b.clientId === selected),
+        decisions: state?.decisions ?? {},
+        memory: state?.memory?.[selected] ?? {},
+        modelSuggestions: state?.modelSuggestions ?? [],
+      }),
+    [mine, state, selected],
+  );
   // accounts with two or more statements and nothing wrong between them
   const goodAccounts = useMemo(() => {
     const groups = new Map<string, Statement[]>();
@@ -255,6 +270,25 @@ export default function StatementsPage() {
         <h2 style={{ fontSize: 18 }}>{clientName(selected)}: statements</h2>
       </div>
 
+      {yearEnd.map((y) => (
+        <div key={y.accountKey} className="card" style={{ marginBottom: 14 }}>
+          <strong>Year-end summary, account ending {y.last4}</strong>
+          <div className="bill-meta">{y.bank}, {monthName(y.from)} to {monthName(y.to)}, {y.statementCount} statements loaded</div>
+          <div className="proof-sum" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            <div><div className="n" style={{ color: y.proven === y.months.length ? "var(--ok)" : undefined }}>{y.proven} of {y.months.length}</div><div className="l">Months proven</div></div>
+            <div><div className="n" style={{ color: y.missing.length ? "var(--bad)" : "var(--ok)" }}>{y.missing.length}</div><div className="l">{y.missing.length ? `Months missing: ${y.missing.map(monthName).join(", ")}` : "Months missing"}</div></div>
+            <div><div className="n" style={{ color: y.breaks ? "var(--bad)" : "var(--ok)" }}>{y.breaks}</div><div className="l">Breaks found</div></div>
+          </div>
+          <div className="chips" style={{ marginTop: 10 }}>
+            {y.months.map((m) => (
+              <span key={m.month} className={`tag ${m.status === "proven" ? "ok" : m.status === "missing" ? "" : "warn"}`} style={m.status === "missing" ? { background: "#fee2e2", color: "var(--bad)" } : undefined} title={m.label}>
+                {monthName(m.month)}: {m.status === "proven" ? "proven" : m.status === "missing" ? "missing" : "not proven"}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+
       {(goodAccounts.length > 0 || issues.length > 0) && (
         <div style={{ marginBottom: 16 }}>
           {goodAccounts.map((g) => (
@@ -278,7 +312,22 @@ export default function StatementsPage() {
             expanded={open.has(s.id)}
             toggle={() => setOpen((o) => { const n = new Set(o); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })}
             patch={(fn) => patchStatement(s.id, fn)}
-            remove={() => update((st) => ({ ...st, statements: st.statements.filter((x) => x.id !== s.id) }))}
+            remove={() =>
+              update((st) => ({
+                ...st,
+                statements: st.statements.filter((x) => x.id !== s.id),
+                decisions: Object.fromEntries(Object.entries(st.decisions).filter(([k]) => !k.startsWith(`${s.id}:`))),
+              }))
+            }
+            matching={{
+              clientId: selected,
+              bills: state.bills.filter((b) => b.clientId === selected),
+              recon,
+              decisions: state.decisions,
+              memory: state.memory,
+              live,
+              update,
+            }}
           />
         ))
       )}
@@ -293,12 +342,14 @@ function StatementCard({
   toggle,
   patch,
   remove,
+  matching,
 }: {
   stmt: Statement;
   expanded: boolean;
   toggle: () => void;
   patch: (fn: (s: Statement) => Statement) => void;
   remove: () => void;
+  matching: Omit<React.ComponentProps<typeof Matching>, "stmt">;
 }) {
   const proof = useMemo(() => proveStatement(stmt), [stmt]);
   const tone = toneOf(proof);
@@ -349,8 +400,11 @@ function StatementCard({
             {fmtDate(stmt.periodStart)} to {fmtDate(stmt.periodEnd)} | {stmt.lines.length} lines | {stmt.fileName}
           </div>
         </div>
-        <span className={`tag ${proof.status === "proven" ? "ok" : proof.status === "break" ? "" : "warn"}`} style={proof.status === "break" ? { background: "#fee2e2", color: "var(--bad)" } : undefined}>
-          {proof.label}
+        <span className="chips">
+          {matching.recon.summaries.get(stmt.id)?.reconciled && <span className="tag ok">Reconciled</span>}
+          <span className={`tag ${proof.status === "proven" ? "ok" : proof.status === "break" ? "" : "warn"}`} style={proof.status === "break" ? { background: "#fee2e2", color: "var(--bad)" } : undefined}>
+            {proof.label}
+          </span>
         </span>
       </div>
 
@@ -467,6 +521,8 @@ function StatementCard({
               </tbody>
             </table>
           </div>
+
+          <Matching stmt={stmt} {...matching} />
 
           <div className="actions" style={{ marginTop: 12, justifyContent: "space-between" }}>
             <span className="bill-meta">The proof re-runs after every correction.</span>

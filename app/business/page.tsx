@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 import { readMode, useDocflow } from "@/lib/store";
+import { clearSamples } from "@/lib/demo";
 import { billsToCsv, downloadCsv } from "@/lib/csv";
 import { money } from "@/lib/malaysia";
 import { fmtDate } from "@/lib/money";
 
 export default function BusinessPage() {
-  const { state, reset } = useDocflow();
+  const { state, update, reset } = useDocflow();
 
   // opened directly while in firm mode: switch to this view's data
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function BusinessPage() {
   const filed = bills.filter((b) => b.status !== "pending");
   const spend = filed.reduce((a, b) => a + b.total, 0);
   const sst = filed.reduce((a, b) => a + b.tax, 0);
+  const hasSamples = state.bills.some((b) => b.sample);
 
   return (
     <main className="page">
@@ -38,8 +40,15 @@ export default function BusinessPage() {
       </p>
 
       <div className="banner">
-        Demo data is loaded so you can click through. Saved in this browser only.{" "}
+        {hasSamples ? "Sample documents are loaded so you can click through. They are invented and labelled Sample. " : "Your own documents only. "}
+        Saved in this browser only.{" "}
         <a href="#" onClick={(e) => { e.preventDefault(); reset(); }}>Reset demo data</a>
+        {hasSamples && (
+          <>
+            {" | "}
+            <a href="#" onClick={(e) => { e.preventDefault(); update(clearSamples); }}>Clear samples</a>
+          </>
+        )}
       </div>
 
       <div className="grid kpis">
@@ -79,7 +88,7 @@ export default function BusinessPage() {
               {bills.map((b) => (
                 <tr key={b.id}>
                   <td>{fmtDate(b.date)}</td>
-                  <td>{b.supplier || "Unknown supplier"}</td>
+                  <td>{b.supplier || "Unknown supplier"}{b.sample && <span className="tag" style={{ marginLeft: 8 }}>Sample</span>}</td>
                   <td>{b.account}</td>
                   <td>{money(b.total, b.currency)}</td>
                   <td>{b.sentBy || "-"}</td>

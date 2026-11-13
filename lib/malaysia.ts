@@ -1,13 +1,13 @@
 import type { Bill, ExtractedBill } from "./types";
+import { TAX_RATES, suggestTaxCodeOn, todayIso } from "./tax";
 
 // Tax codes offered in the review screen. The accountant always confirms the final treatment.
-export const TAX_CODES: { code: string; label: string; rate: number }[] = [
-  { code: "NONE", label: "No tax / out of scope", rate: 0 },
-  { code: "SVC8", label: "Service tax 8%", rate: 0.08 },
-  { code: "SVC6", label: "Service tax 6%", rate: 0.06 },
-  { code: "ST10", label: "Sales tax 10%", rate: 0.1 },
-  { code: "ST5", label: "Sales tax 5%", rate: 0.05 },
-];
+// Rates and effective dates live in lib/tax.ts (one table, date aware).
+export const TAX_CODES: { code: string; label: string; rate: number }[] = TAX_RATES.map((r) => ({
+  code: r.code,
+  label: r.label,
+  rate: r.rate,
+}));
 
 export const ACCOUNTS: string[] = [
   "Advertising and marketing",
@@ -52,19 +52,8 @@ export function suggestAccount(supplier: string, description: string): string {
   return "General expenses";
 }
 
-export function suggestTaxCode(tax: number, subtotal: number): string {
-  if (!tax || tax <= 0 || !subtotal) return "NONE";
-  const rate = tax / subtotal;
-  let best = TAX_CODES[0];
-  let bestDiff = Math.abs(rate - 0);
-  for (const t of TAX_CODES) {
-    const diff = Math.abs(rate - t.rate);
-    if (diff < bestDiff) {
-      best = t;
-      bestDiff = diff;
-    }
-  }
-  return bestDiff < 0.012 ? best.code : "NONE";
+export function suggestTaxCode(tax: number, subtotal: number, date: string = todayIso()): string {
+  return suggestTaxCodeOn(tax, subtotal, date);
 }
 
 export interface Flag {
@@ -104,7 +93,7 @@ export function flagsFor(bill: Bill, all: Bill[]): Flag[] {
 
 export function toBillFields(e: ExtractedBill): Pick<Bill, "taxCode" | "account"> {
   return {
-    taxCode: suggestTaxCode(e.tax, e.subtotal),
+    taxCode: suggestTaxCode(e.tax, e.subtotal, e.date),
     account: suggestAccount(e.supplier, e.description),
   };
 }

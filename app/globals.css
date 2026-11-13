@@ -178,7 +178,8 @@ input, select {
 .lines tr.flash td { animation: flash 1.6s ease-out; }
 @keyframes flash { from { background: #fde68a; } to { background: transparent; } }
 .lines input { width: 110px; text-align: right; padding: 4px 6px; }
-.lines .desc { max-width: 380px; overflow-wrap: anywhere; }
+.lines .desc { min-width: 230px; max-width: 360px; overflow-wrap: anywhere; }
+.lines select { padding: 4px 6px; font-size: 13px; }
 .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
 .linkbtn:hover { text-decoration: underline; }
 .issue { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
@@ -190,3 +191,6 @@ input, select {
 .stmt-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; cursor: pointer; }
 .stmt-head h3 { margin: 0; font-size: 16px; }
 .pw { background: var(--warn-soft); border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 16px; margin-top: 16px; }
+
+/* ---------- demo badge ---------- */
+.demo-badge { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }

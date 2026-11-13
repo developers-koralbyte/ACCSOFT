@@ -1,4 +1,5 @@
 import type { Statement } from "./statements/types";
+import type { LineDecision, ModelSuggestion, PayeeMemory } from "./match/types";
 
 export type Source = "whatsapp" | "upload" | "email";
 export type BillStatus = "pending" | "approved" | "posted";
@@ -31,6 +32,7 @@ export interface Bill {
   fileName?: string;
   sentBy?: string; // who sent the document in the WhatsApp chat, when known
   postedRef?: string;
+  sample?: boolean; // clearly labelled sample document, removable with Clear samples
 }
 
 export interface ExtractedBill {
@@ -49,4 +51,7 @@ export interface AppState {
   clients: Client[];
   bills: Bill[];
   statements: Statement[];
+  decisions: Record<string, LineDecision>; // a person's actions on bank lines, keyed statementId:lineId
+  memory: PayeeMemory; // payee memory per client
+  modelSuggestions: ModelSuggestion[];
 }
