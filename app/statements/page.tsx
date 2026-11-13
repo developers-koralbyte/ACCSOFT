@@ -20,6 +20,7 @@ import { reconcileForClient } from "@/lib/month/snapshot";
 import Matching from "./matching";
 import expected from "@/data/sample-expected.json";
 import { GUARANTEE as GUARANTEE_TEXT } from "@/lib/copy";
+import { SITE } from "@/lib/site-config";
 
 const MAX_BATCH = 12;
 
@@ -235,7 +236,7 @@ export default function StatementsPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page wide">
       <h1>Bank statements</h1>
       <p className="sub">
         Upload a bank statement PDF. It is read in your browser, then proven to the cent: opening balance plus money in,
@@ -265,7 +266,7 @@ export default function StatementsPage() {
         </label>
         <p style={{ fontSize: 13, margin: "14px 0 0" }}>
           Digital statements are read on your device, so there is no upload size limit and nothing is sent to a server. If a PDF is
-          password protected you will be asked for the password. It is used in this browser tab only and is never saved. Never share online banking logins: DocFlow does not need them.
+          password protected you will be asked for the password. It is used in this browser tab only and is never saved. Never share online banking logins: {SITE.name} does not need them.
         </p>
         <p style={{ fontSize: 13, margin: "8px 0 0" }}>
           The PDF files are kept in this browser only, so they can go in the audit pack. Each statement has a Remove file button, and the figures stay.
@@ -517,7 +518,7 @@ function StatementCard({
           <div style={{ overflowX: "auto", marginTop: 14 }}>
             <table className="lines">
               <thead>
-                <tr><th>#</th><th>Date</th><th>Description</th><th className="num">Money out</th><th className="num">Money in</th><th className="num">Balance</th><th>Page</th><th /></tr>
+                <tr><th>#</th><th>Date</th><th className="desc">Description</th><th className="num">Money out</th><th className="num">Money in</th><th className="num">Balance</th><th>Page</th><th /></tr>
               </thead>
               <tbody>
                 {stmt.lines.map((l, i) => {

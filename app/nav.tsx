@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DATA_EVENT, hasSampleData, readMode, resetDemoData, useStaff, writeMode, writeStaff, type Mode } from "@/lib/store";
 import { STAFF } from "@/lib/staff";
+import { SITE } from "@/lib/site-config";
 
 interface Status {
   configured: boolean;
@@ -63,7 +64,7 @@ export default function Nav() {
   if (path === "/" || path === "/pricing") {
     return (
       <header className="topbar public">
-        <Link href="/" className="brand">DocFlow</Link>
+        <Link href="/" className="brand">{SITE.name}</Link>
         <nav className="nav">
           <Link href="/#how" className={path === "/" ? "" : ""}>How it works</Link>
           <Link href="/pricing" className={path === "/pricing" ? "active" : ""}>Pricing</Link>
@@ -83,7 +84,7 @@ export default function Nav() {
   return (
     <header className="topbar">
       <span className="brand">
-        DocFlow<small>working name</small>
+        {SITE.name}{SITE.workingName && <small>working name</small>}
       </span>
       <nav className="nav">
         {mode === "firm" ? link("/board", "Month board") : link("/business", "My documents")}
@@ -110,7 +111,7 @@ export default function Nav() {
         </label>
       )}
       <button className="reset-demo" onClick={resetDemo}>Reset demo</button>
-      <div className="mode-toggle" role="group" aria-label="Who is using DocFlow">
+      <div className="mode-toggle" role="group" aria-label={`Who is using ${SITE.name}`}>
         <button className={mode === "firm" ? "on" : ""} onClick={() => choose("firm")}>Accounting firm</button>
         <button className={mode === "business" ? "on" : ""} onClick={() => choose("business")}>My business</button>
       </div>

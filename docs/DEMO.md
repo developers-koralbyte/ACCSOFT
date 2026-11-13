@@ -107,7 +107,7 @@ All client-facing wording is in one file: `lib/chase/templates.ts`. The screen s
 
 ## Open items that need your input
 
-1. **Contact details.** `lib/site-config.ts` has placeholders: WhatsApp number `60100000000` and email `hello@example.com`. Both public pages read from it. Replace them before sharing the site.
+1. **Contact details** are in `lib/site-config.ts`. The email is `alisyed@koralbyte.com`. `whatsappNumber` is empty on purpose, so every WhatsApp contact button on the public pages is hidden. Set it (digits only, starting with 60) and the buttons appear. The product name is `SITE.name` there too, and every screen reads it from that one line.
 2. **SST rates and effective dates** in `lib/tax.ts` are best recollection, marked TODO. Verify every rate and date, including which services are taxed at 6% versus 8%. Bank charges are proposed at no tax, which also needs checking.
 3. **Vendor templates to finalise the three draft ledgers.** For each, the sample import file or template from the vendor's own import screen, with a filled example row:
    - **SQL Account:** the import template for bank or cash book transactions (or the payment voucher and official receipt import), with the exact account code and tax code format.

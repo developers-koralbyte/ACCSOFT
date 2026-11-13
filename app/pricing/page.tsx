@@ -5,7 +5,7 @@ import { useState } from "react";
 import { GUARANTEE } from "@/lib/copy";
 import { fmtRM, fmtRMShort } from "@/lib/money";
 import { firmQuote, PRICING } from "@/lib/pricing";
-import { emailContactUrl, SITE, whatsappContactUrl } from "@/lib/site-config";
+import { emailContactUrl, SITE, whatsappConfigured, whatsappContactUrl } from "@/lib/site-config";
 
 export default function PricingPage() {
   const [clients, setClients] = useState("12");
@@ -104,8 +104,8 @@ export default function PricingPage() {
             <p className="sub" style={{ margin: "4px 0 0" }}>Send us one bank statement and we will show you the result.</p>
           </div>
           <div className="cta-row" style={{ margin: 0 }}>
-            <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>
-            <a className="btn secondary" href={emailContactUrl()}>Email {SITE.email}</a>
+            {whatsappConfigured() && <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>}
+            <a className="btn" href={emailContactUrl()}>Email {SITE.email}</a>
             <Link className="btn secondary" href="/board">Open the demo</Link>
           </div>
         </div>

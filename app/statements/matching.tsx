@@ -136,7 +136,7 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
         {summary.reconciled ? (
           <span className="tag ok">Reconciled</span>
         ) : (
-          <span className="tag warn">Not reconciled: {summary.outstanding.join(", ")}</span>
+          <span className="tag warn long">Not reconciled: {summary.outstanding.join(", ")}</span>
         )}
       </div>
 
@@ -194,9 +194,9 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
       {flow.promptNode}
 
       <div style={{ overflowX: "auto" }}>
-        <table className="lines">
+        <table className="lines match">
           <thead>
-            <tr><th>#</th><th>Date</th><th>Description</th><th className="num">Amount</th><th>State</th><th>Category</th><th>Tax code</th><th /></tr>
+            <tr><th>#</th><th>Date</th><th className="desc">Description</th><th className="num">Amount</th><th>State</th><th>Category</th><th>Tax code</th><th /></tr>
           </thead>
           <tbody>
             {rows.map((r) => {
@@ -244,17 +244,17 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
                     {r.state === "bank-only" && !r.categoryConfirmed && <div className="bill-meta">To confirm</div>}
                     {r.categoryConfirmed && r.state !== "unexplained" && !r.accepted && <div className="bill-meta">Confirmed</div>}
                   </td>
-                  <td style={{ minWidth: 140 }}>
+                  <td style={{ minWidth: 0 }}>
                     <select aria-label="Category" disabled={locked} value={d.category} onChange={(e) => setDraft({ ...draft, [r.key]: { ...d, category: e.target.value } })}>
                       {(ALL_CATEGORIES.includes(d.category) ? ALL_CATEGORIES : [d.category, ...ALL_CATEGORIES]).map((a) => <option key={a}>{a}</option>)}
                     </select>
                   </td>
-                  <td style={{ minWidth: 120 }}>
+                  <td style={{ minWidth: 0 }}>
                     <select aria-label="Tax code" disabled={locked} value={d.tax} onChange={(e) => setDraft({ ...draft, [r.key]: { ...d, tax: e.target.value } })}>
                       {taxOptions.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                     </select>
                   </td>
-                  <td className="num" style={{ whiteSpace: "normal", minWidth: 130 }}>
+                  <td className="num" style={{ whiteSpace: "normal" }}>
                     {!locked && r.state === "suggested" && (
                       <>
                         <button className="btn" style={{ padding: "4px 10px" }} onClick={() => flow.commit(r, "accept", d.category, d.tax, { label: labelOf(r), month })}>Accept</button>{" "}

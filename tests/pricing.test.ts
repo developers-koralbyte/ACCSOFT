@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extraDocumentsCost, firmQuote, PRICING } from "@/lib/pricing";
 import { inviteAccountantUrl } from "@/lib/invite";
-import { emailContactUrl, SITE, whatsappContactUrl } from "@/lib/site-config";
+import { emailContactUrl, isWhatsappNumber, SITE, whatsappConfigured, whatsappContactUrl } from "@/lib/site-config";
 import { GUARANTEE, HEADLINE } from "@/lib/copy";
 
 describe("firm pricing maths (integer sen)", () => {
@@ -51,11 +51,21 @@ describe("firm pricing maths (integer sen)", () => {
 describe("shared copy and contact config", () => {
   it("has the exact headline and guarantee", () => {
     expect(HEADLINE).toBe("Every client's month complete by the 5th, without chasing.");
-    expect(GUARANTEE).toBe("If DocFlow cannot tie a statement to the cent or point to the exact line that breaks, that client's month is free.");
+    expect(GUARANTEE).toBe(`If ${SITE.name} cannot tie a statement to the cent or point to the exact line that breaks, that client's month is free.`);
   });
-  it("builds the WhatsApp and email links from the one config", () => {
-    expect(whatsappContactUrl()).toBe(`https://wa.me/${SITE.whatsappNumber}?text=${encodeURIComponent(SITE.whatsappMessage)}`);
+  it("has the real email and no WhatsApp number, so WhatsApp contact is hidden", () => {
+    expect(SITE.email).toBe("alisyed@koralbyte.com");
+    expect(SITE.whatsappNumber).toBe("");
+    expect(whatsappConfigured()).toBe(false);
+    expect(whatsappContactUrl()).toBe("");
+  });
+  it("only accepts a digits-only number starting with 60", () => {
+    expect(isWhatsappNumber("60123456789")).toBe(true);
+    for (const bad of ["", "0123456789", "+60123456789", "[YOUR NUMBER]", "6012", "60 12 3456 789"]) expect(isWhatsappNumber(bad)).toBe(false);
+  });
+  it("builds the email link from the one config, with an optional body", () => {
     expect(emailContactUrl()).toBe(`mailto:${SITE.email}?subject=${encodeURIComponent(SITE.emailSubject)}`);
+    expect(emailContactUrl("Hi", "Line one\nLine two")).toBe(`mailto:${SITE.email}?subject=Hi&body=${encodeURIComponent("Line one\nLine two")}`);
   });
   it("the invite link is a prefilled WhatsApp message with no number", () => {
     const url = inviteAccountantUrl("https://example.vercel.app");

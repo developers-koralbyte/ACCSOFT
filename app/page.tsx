@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { HEADLINE, GUARANTEE } from "@/lib/copy";
-import { emailContactUrl, SITE, whatsappContactUrl } from "@/lib/site-config";
+import { emailContactUrl, SITE, whatsappConfigured, whatsappContactUrl } from "@/lib/site-config";
 import { StartGuidedDemoButton } from "./guided-demo";
 
-export const metadata = { title: "DocFlow: every client's month complete by the 5th" };
+export const metadata = { title: `${SITE.name}: every client's month complete by the 5th` };
 
 const POINTS = [
-  { title: "Clients just forward documents on WhatsApp", text: "Invoices, bills and receipts arrive where your clients already send them. Export a chat with its media and every document is read in one go." },
+  { title: "Collect documents from WhatsApp", text: "Today you import a chat export with its photos and PDFs in one go, and every document is read for review. Live forwarding to a WhatsApp number is in development." },
   { title: "Every bank statement is proven to the cent", text: "Opening balance plus money in, less money out, must equal the closing balance, and every running balance must agree line by line. A break is pointed to the exact line." },
   { title: "Works with the ledger you already use", text: "Export approved bank lines for Xero or QuickBooks today. SQL Account, AutoCount and Zoho Books are in draft until their templates are checked. Xero draft bill posting is built in." },
 ];
 
 const STEPS = [
-  { n: 1, title: "Documents arrive", text: "Clients forward photos and PDFs on WhatsApp. DocFlow reads each one and lists them for review, with warnings for mismatched totals, duplicates and low confidence.", img: "/screens/documents.jpg", alt: "The review queue with documents read from WhatsApp" },
+  { n: 1, title: "Documents arrive", text: `Export a client's WhatsApp chat with its photos and PDFs and import it. ${SITE.name} reads each one and lists them for review, with warnings for mismatched totals, duplicates and low confidence. Live forwarding to a WhatsApp number is in development.`, img: "/screens/documents.jpg", alt: "The review queue with documents read from WhatsApp" },
   { n: 2, title: "The statement is proven", text: "Upload a bank statement PDF. It is read in your browser and proven to the cent, with the exact line named if anything breaks.", img: "/screens/proof.jpg", alt: "A bank statement shown as proven to the cent" },
   { n: 3, title: "Lines are matched, and the rest are asked", text: "Bank lines are matched to documents by clear rules, and each rule is recorded. Payments nobody can explain become short questions to the client on WhatsApp.", img: "/screens/matching.jpg", alt: "Bank lines matched to documents, with the rule shown for each" },
   { n: 4, title: "The month is approved and exported", text: "A board shows every client's month at a glance. Two people sign off, the month locks, and you download the audit pack and your ledger file.", img: "/screens/board.jpg", alt: "The month board with a row for each client" },
@@ -25,7 +25,7 @@ export default function Landing() {
         <div className="wrap">
           <h1>{HEADLINE}</h1>
           <p className="lead">
-            DocFlow gives accounting firms a finished month, not just a document reader: documents collected, bank statements proven, every line explained, and a month you can sign off and hand over.
+            {SITE.name} gives accounting firms a finished month, not just a document reader: documents collected, bank statements proven, every line explained, and a month you can sign off and hand over.
           </p>
           <div className="cta-row">
             <Link className="btn big" href="/board">Open the demo</Link>
@@ -81,14 +81,14 @@ export default function Landing() {
             <p className="sub" style={{ margin: "4px 0 0" }}>Send us one bank statement and see it proven, matched and ready to export.</p>
           </div>
           <div className="cta-row" style={{ margin: 0 }}>
-            <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>
-            <a className="btn secondary" href={emailContactUrl()}>Email {SITE.email}</a>
+            {whatsappConfigured() && <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>}
+            <a className="btn" href={emailContactUrl()}>Email {SITE.email}</a>
           </div>
         </div>
       </section>
 
       <footer className="wrap site-foot">
-        <span>{SITE.name} (working name)</span>
+        <span>{SITE.name}{SITE.workingName ? " (working name)" : ""}</span>
         <span><Link href="/pricing">Pricing</Link> | <Link href="/board">Open the demo</Link></span>
       </footer>
     </main>

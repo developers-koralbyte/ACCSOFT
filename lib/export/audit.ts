@@ -3,6 +3,7 @@ import { fmtDate, fmtDateTime, fmtRM, monthName } from "../money";
 import { getMonth } from "../month/records";
 import type { MonthRecord, MonthSnapshot, SnapStatement } from "../month/types";
 import type { AppState, Client } from "../types";
+import { SITE } from "../site-config";
 import { toCsv, safeName } from "./csv";
 import { exportBankLines, genericCsv } from "./formats";
 import { ledgerInfo } from "./ledgers";
@@ -132,7 +133,7 @@ ${sections}
     <div><strong>Reviewed by</strong><br>${esc(rec.reviewed?.name)}<br><span class="meta">${esc(rec.reviewed ? fmtDateTime(rec.reviewed.at) : "")}</span></div>
   </div>
 </section>
-<footer>Built from the approval snapshot taken ${esc(fmtDateTime(snapshot.takenAt))}. It does not change if documents are edited later. Prepared with DocFlow.</footer>
+<footer>Built from the approval snapshot taken ${esc(fmtDateTime(snapshot.takenAt))}. It does not change if documents are edited later. Prepared with ${esc(SITE.name)}.</footer>
 </body></html>`;
 }
 

@@ -178,7 +178,7 @@ input, select {
 .lines tr.flash td { animation: flash 1.6s ease-out; }
 @keyframes flash { from { background: #fde68a; } to { background: transparent; } }
 .lines input { width: 110px; text-align: right; padding: 4px 6px; }
-.lines .desc { min-width: 230px; max-width: 360px; overflow-wrap: anywhere; }
+.lines .desc { min-width: 230px; overflow-wrap: anywhere; }
 .lines select { padding: 4px 6px; font-size: 13px; }
 .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
 .linkbtn:hover { text-decoration: underline; }
@@ -303,7 +303,7 @@ button.chase { margin-top: 6px; padding: 3px 10px; font-size: 12px; }
 
 /* ---------- phone width ---------- */
 .card { overflow-x: auto; max-width: 100%; }
-.page { overflow-wrap: anywhere; }
+
 @media (max-width: 600px) {
   .page { padding: 20px 14px 90px; }
   .topbar { padding: 8px 14px; gap: 8px 12px; }
@@ -347,4 +347,25 @@ button.chase { margin-top: 6px; padding: 3px 10px; font-size: 12px; }
   .topbar:not(.public) .nav { order: 10; flex: 1 1 100%; flex-wrap: wrap; margin: 0 -8px; }
   .topbar:not(.public) .brand { margin-right: auto; }
   .topbar:not(.public) .demo-badge, .topbar:not(.public) .staff-switch, .topbar:not(.public) .reset-demo, .topbar:not(.public) .mode-toggle, .topbar:not(.public) .xero-pill { order: 2; }
+}
+
+/* ---------- statement line tables: fixed narrow columns, flexible description, pills on one line ---------- */
+.tag { white-space: nowrap; }
+.lines th, .lines td { white-space: nowrap; }
+.lines td.desc, .lines th.desc { white-space: normal; width: 100%; min-width: 200px; }
+.lines th:nth-child(1), .lines td:nth-child(1) { min-width: 40px; }
+.lines th:nth-child(2), .lines td:nth-child(2) { min-width: 90px; }
+.lines td.num, .lines th.num { min-width: 100px; }
+table.lines.match { min-width: 930px; }
+table.lines.match th:nth-child(5), table.lines.match td:nth-child(5) { min-width: 112px; }
+table.lines.match th:nth-child(6), table.lines.match td:nth-child(6) { min-width: 134px; }
+table.lines.match th:nth-child(7), table.lines.match td:nth-child(7) { min-width: 118px; }
+table.lines.match th:nth-child(8), table.lines.match td:nth-child(8) { min-width: 116px; white-space: normal; }
+
+.page.wide { max-width: 1240px; }
+
+.tag.long { white-space: normal; max-width: 100%; }
+@media (min-width: 1200px) {
+  table.lines.match th:nth-child(6), table.lines.match td:nth-child(6) { min-width: 156px; }
+  table.lines.match th:nth-child(7), table.lines.match td:nth-child(7) { min-width: 140px; }
 }

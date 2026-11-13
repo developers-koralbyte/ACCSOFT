@@ -26,8 +26,8 @@ export function SnapshotStatementView({ snap, bills }: { snap: SnapStatement; bi
         <span className="tag">{snap.proofLabel}{snap.totalsOnlyAcknowledged ? " (warning acknowledged)" : ""}</span>
       </div>
       <div style={{ overflowX: "auto" }}>
-        <table className="lines">
-          <thead><tr><th>#</th><th>Date</th><th>Description</th><th className="num">Amount</th><th>State</th><th>Category</th><th>Tax code</th></tr></thead>
+        <table className="lines match">
+          <thead><tr><th>#</th><th>Date</th><th className="desc">Description</th><th className="num">Amount</th><th>State</th><th>Category</th><th>Tax code</th></tr></thead>
           <tbody>
             {snap.lines.map((l) => (
               <tr key={l.lineId}>
