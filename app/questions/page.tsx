@@ -210,7 +210,19 @@ export default function QuestionsPage() {
                       {d.doc && <div className="bill-meta" style={{ gridColumn: "span 2" }}>Category and tax code will come from the document, through the normal match.</div>}
                     </div>
                     {err[q.key] && <div className="err">{err[q.key]}</div>}
-                    <div className="actions"><button className="btn" onClick={() => record(q)}>Record answer</button></div>
+                    <div className="actions">
+                      <button
+                        className="btn secondary"
+                        title="Fills in a made-up answer so you can see the flow. You still press Record answer."
+                        onClick={() => {
+                          const rent = /RENT|SEWA/i.test(q.description);
+                          setAnswers({ ...answers, [q.key]: { text: rent ? "Shop rent for the month, no invoice" : "Repairs to the delivery van", doc: "", category: rent ? "Rent" : "Repairs and maintenance", tax: q.result.taxCode } });
+                        }}
+                      >
+                        Use example answer
+                      </button>
+                      <button className="btn" onClick={() => record(q)}>Record answer</button>
+                    </div>
                   </>
                 )}
               </div>

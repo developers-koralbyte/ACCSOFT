@@ -162,8 +162,19 @@ export async function resetDemoData(mode: Mode): Promise<void> {
   try {
     window.localStorage.setItem(KEYS[mode], JSON.stringify(seed(mode)));
     window.localStorage.removeItem("docflow-guide");
+    window.localStorage.removeItem(STAFF_KEY); // back to the first staff member
   } catch {
     /* ignore */
   }
   announce();
+}
+
+// Reads the saved data for a mode without subscribing. Used by screens that stay mounted, like the guided demo panel.
+export function loadState(mode: Mode): AppState {
+  try {
+    const raw = window.localStorage.getItem(KEYS[mode]);
+    return raw ? normalise(JSON.parse(raw) as Partial<AppState>, mode) : seed(mode);
+  } catch {
+    return seed(mode);
+  }
 }

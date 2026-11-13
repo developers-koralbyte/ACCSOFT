@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "./nav";
+import GuidedDemo from "./guided-demo";
 
 export const metadata: Metadata = {
   title: "DocFlow",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Nav />
         {children}
+        <GuidedDemo />
       </body>
     </html>
   );

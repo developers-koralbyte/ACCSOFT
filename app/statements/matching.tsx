@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { fmtDate, fmtRM } from "@/lib/money";
 import { taxOptionsFor } from "@/lib/tax";
 import { ALL_CATEGORIES } from "@/lib/match/categories";
-import { linkDocument, rejectSuggestion, undoDecision } from "@/lib/match/actions";
+import { linkDocument, markBankOnly, rejectSuggestion, undoDecision } from "@/lib/match/actions";
 import { buildModelRequest, validateModelSuggestions } from "@/lib/match/model";
 import type { LineDecision, LineResult, LineState, PayeeMemory, Reconciliation } from "@/lib/match/types";
 import type { AppState, Bill } from "@/lib/types";
@@ -157,6 +157,23 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
         <span className="tag" style={c.unexplained ? { background: "#fee2e2", color: "var(--bad)" } : undefined}>Unexplained {c.unexplained}</span>
         <span className="tag answered">Answered {c.answered}</span>
         {summary.bankOnlyToConfirm > 0 && <span className="tag warn">{summary.bankOnlyToConfirm} bank only {summary.bankOnlyToConfirm === 1 ? "line" : "lines"} to confirm</span>}
+        {!locked && summary.bankOnlyToConfirm > 1 && (
+          <button
+            className="tag warn"
+            style={{ border: "none", cursor: "pointer", fontFamily: "inherit" }}
+            title="Confirms every bank only line with the category and tax code shown. One explicit click by you."
+            onClick={() => {
+              const todo = rows.filter((r) => r.state === "bank-only" && !r.categoryConfirmed);
+              act("bank-only", `Confirmed ${todo.length} bank only categories in one step`, (s) => {
+                let d = s.decisions;
+                for (const r of todo) d = markBankOnly(d, r.key, cur(r).category, cur(r).tax, by);
+                return { ...s, decisions: d };
+              }, month);
+            }}
+          >
+            Confirm all {summary.bankOnlyToConfirm} proposed categories
+          </button>
+        )}
         {c.unexplained > 0 && (
           <a className="tag" href={`/questions?client=${clientId}&month=${month}`}>Ask the client about {c.unexplained} unexplained</a>
         )}

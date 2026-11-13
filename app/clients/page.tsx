@@ -51,7 +51,7 @@ export default function ClientsPage() {
 
       <div className="banner">
         Demo data is loaded so you can click through the full flow. Saved in this browser only.{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); reset(); }}>Reset demo data</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); if (window.confirm("Restore the sample data? Everything you changed in this demo is removed.")) reset(); }}>Reset demo data</a>
       </div>
 
       <div className="grid kpis">

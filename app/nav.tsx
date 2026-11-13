@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DATA_EVENT, hasSampleData, readMode, useStaff, writeMode, writeStaff, type Mode } from "@/lib/store";
+import { DATA_EVENT, hasSampleData, readMode, resetDemoData, useStaff, writeMode, writeStaff, type Mode } from "@/lib/store";
 import { STAFF } from "@/lib/staff";
 
 interface Status {
@@ -50,7 +50,28 @@ export default function Nav() {
     if (next === mode) return;
     writeMode(next);
     // full reload so every screen loads the saved data for the chosen mode
-    window.location.assign(next === "business" ? "/business" : "/");
+    window.location.assign(next === "business" ? "/business" : "/board");
+  }
+
+  async function resetDemo() {
+    if (!window.confirm("Restore the sample data? Everything you changed in this demo is removed, including statement PDFs stored in this browser.")) return;
+    await resetDemoData(mode);
+    window.location.assign(mode === "business" ? "/business" : "/board");
+  }
+
+  // The public pages (landing and pricing) have their own simple header, with no app tabs and no demo badge.
+  if (path === "/" || path === "/pricing") {
+    return (
+      <header className="topbar public">
+        <Link href="/" className="brand">DocFlow</Link>
+        <nav className="nav">
+          <Link href="/#how" className={path === "/" ? "" : ""}>How it works</Link>
+          <Link href="/pricing" className={path === "/pricing" ? "active" : ""}>Pricing</Link>
+          <Link href="/#contact">Contact</Link>
+        </nav>
+        <Link className="open-demo" href="/board">Open the demo</Link>
+      </header>
+    );
   }
 
   const link = (href: string, label: string) => (
@@ -65,7 +86,7 @@ export default function Nav() {
         DocFlow<small>working name</small>
       </span>
       <nav className="nav">
-        {mode === "firm" ? link("/", "Month board") : link("/business", "My documents")}
+        {mode === "firm" ? link("/board", "Month board") : link("/business", "My documents")}
         {mode === "firm" && link("/clients", "Clients")}
         {link("/inbox", "Review queue")}
         {link("/statements", "Bank statements")}
@@ -88,6 +109,7 @@ export default function Nav() {
           </select>
         </label>
       )}
+      <button className="reset-demo" onClick={resetDemo}>Reset demo</button>
       <div className="mode-toggle" role="group" aria-label="Who is using DocFlow">
         <button className={mode === "firm" ? "on" : ""} onClick={() => choose("firm")}>Accounting firm</button>
         <button className={mode === "business" ? "on" : ""} onClick={() => choose("business")}>My business</button>

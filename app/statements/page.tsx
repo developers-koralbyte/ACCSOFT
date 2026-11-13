@@ -19,11 +19,11 @@ import { reconcileClient } from "@/lib/match/engine";
 import { reconcileForClient } from "@/lib/month/snapshot";
 import Matching from "./matching";
 import expected from "@/data/sample-expected.json";
+import { GUARANTEE as GUARANTEE_TEXT } from "@/lib/copy";
 
 const MAX_BATCH = 12;
 
-const GUARANTEE =
-  "If DocFlow cannot tie a statement to the cent or point to the exact line that breaks, that client's month is free.";
+const GUARANTEE = GUARANTEE_TEXT;
 
 const SAMPLES = Object.entries(expected).map(([id, e]) => ({
   id,
@@ -80,6 +80,10 @@ export default function StatementsPage() {
         .sort((a, b) => (a.periodEnd < b.periodEnd ? -1 : 1)),
     [state, selected],
   );
+  // arriving on the page with statements already loaded: open the latest one so the proof and matching are in view
+  useEffect(() => {
+    if (open.size === 0 && mine.length > 0) setOpen(new Set([mine[mine.length - 1].id]));
+  }, [mine.length, selected]); // eslint-disable-line react-hooks/exhaustive-deps
   const issues = useMemo(() => checkContinuity(mine), [mine]);
   const yearEnd = useMemo(() => yearEndSummaries(mine), [mine]);
   const recon = useMemo(() => (state ? reconcileForClient(state, selected) : reconcileClient({ statements: [], bills: [], decisions: {}, memory: {} })), [state, selected]);
@@ -151,7 +155,7 @@ export default function StatementsPage() {
           text: `Added statement ${stmt.fileName}: account ending ${stmt.accountLast4}, ${stmt.lines.length} lines`,
         }),
       );
-      setOpen((o) => new Set(o).add(stmt.id));
+      setOpen(new Set([stmt.id])); // focus on the statement just added
       if (item.clientId !== selected) setClientId(item.clientId);
       if (item.kind !== "sample") {
         // keep the original PDF in this browser so the audit pack can include it

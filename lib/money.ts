@@ -66,3 +66,8 @@ export function fmtDateTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }
+
+// "RM199" when the amount is whole ringgit, otherwise "RM0.20". For price lists.
+export function fmtRMShort(sen: number): string {
+  return sen % 100 === 0 ? fmtRM(sen).replace(".00", "") : fmtRM(sen);
+}

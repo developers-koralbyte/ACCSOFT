@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, fmtRM, monthName, parseSen, senToPlain, toSen } from "@/lib/money";
+import { fmtDate, fmtRM, fmtRMShort, monthName, parseSen, senToPlain, toSen } from "@/lib/money";
 
 describe("money in sen", () => {
   it("parses without float drift", () => {
@@ -21,6 +21,11 @@ describe("money in sen", () => {
     expect(fmtRM(-240000)).toBe("-RM2,400.00");
     expect(fmtRM(100000000)).toBe("RM1,000,000.00");
     expect(senToPlain(240000)).toBe("2400.00");
+  });
+  it("formats price list amounts without .00 when whole", () => {
+    expect(fmtRMShort(19900)).toBe("RM199");
+    expect(fmtRMShort(20)).toBe("RM0.20");
+    expect(fmtRMShort(15000)).toBe("RM150");
   });
   it("formats dates as DD/MM/YYYY", () => {
     expect(fmtDate("2026-10-12")).toBe("12/10/2026");
