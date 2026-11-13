@@ -1,3 +1,10 @@
+import type { Statement } from "./statements/types";
+import type { LineDecision, ModelSuggestion, PayeeMemory } from "./match/types";
+import type { ActivityEntry } from "./activity";
+import type { ChaseRecord, HistoryItem, Lang, QuestionRecord } from "./chase/types";
+import type { MonthRecord } from "./month/types";
+import type { LedgerId } from "./export/ledgers";
+
 export type Source = "whatsapp" | "upload" | "email";
 export type BillStatus = "pending" | "approved" | "posted";
 
@@ -8,6 +15,9 @@ export interface Client {
   docsExpected: number; // documents expected this month
   docsReceived: number;
   lastReminder?: string;
+  language?: Lang; // language for WhatsApp messages, English when not set
+  ledger?: LedgerId; // the accounting software this client uses, for exports
+  fyEndMonth?: number; // financial year end month, 1 to 12, December when not set
 }
 
 export interface Bill {
@@ -29,6 +39,7 @@ export interface Bill {
   fileName?: string;
   sentBy?: string; // who sent the document in the WhatsApp chat, when known
   postedRef?: string;
+  sample?: boolean; // clearly labelled sample document, removable with Clear samples
 }
 
 export interface ExtractedBill {
@@ -46,4 +57,13 @@ export interface ExtractedBill {
 export interface AppState {
   clients: Client[];
   bills: Bill[];
+  statements: Statement[];
+  decisions: Record<string, LineDecision>; // a person's actions on bank lines, keyed statementId:lineId
+  memory: PayeeMemory; // payee memory per client
+  modelSuggestions: ModelSuggestion[];
+  questions: Record<string, QuestionRecord>; // sent questions, keyed statementId:lineId
+  history: HistoryItem[]; // what clients sent in earlier months
+  chases: Record<string, ChaseRecord>; // missing-document chases, keyed clientId:month
+  months: Record<string, MonthRecord>; // per client and month: waived documents, acknowledgements, sign-off, snapshot
+  activity: ActivityEntry[];
 }

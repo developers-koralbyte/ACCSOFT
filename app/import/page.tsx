@@ -5,6 +5,11 @@ import { unzipSync } from "fflate";
 import { useDocflow } from "@/lib/store";
 import { toBillFields } from "@/lib/malaysia";
 import { extractFile } from "@/lib/client";
+import { ingestPdf } from "@/lib/statements/ingest";
+import { loadBrowserPdfjs, PdfPasswordError } from "@/lib/statements/pdf";
+import { duplicateMessage, toStatement } from "@/lib/statements/build";
+import { proveStatement } from "@/lib/statements/proof";
+import { saveFile } from "@/lib/files";
 import type { Bill } from "@/lib/types";
 
 const MAX_FILES = 40;
@@ -101,7 +106,37 @@ export default function ImportPage() {
     setWorking(true);
     setLog(skipped ? [{ text: `Skipped ${skipped} already imported`, ok: true }] : []);
     let done = 0;
+    let pdfjs: Awaited<ReturnType<typeof loadBrowserPdfjs>> | null = null;
+    const addedStatements = [...state!.statements];
     for (const f of batch) {
+      // A PDF that is a bank statement goes to Bank statements, where it is proven. Anything else is read as a bill.
+      if (/\.pdf$/i.test(f.name)) {
+        try {
+          pdfjs = pdfjs ?? (await loadBrowserPdfjs());
+          const r = await ingestPdf(f.data, { pdfjs, liveAvailable: false });
+          if (r.kind === "statement" && r.draft.lines.length >= 3 && r.draft.opening !== null && r.draft.closing !== null) {
+            const stmt = toStatement(r.draft, { clientId: selected, fileName: f.name, kind: "pdf-text" });
+            const dup = duplicateMessage(addedStatements, stmt);
+            if (dup) {
+              setLog((l) => [...l, { text: `${f.name}: bank statement already on file, skipped`, ok: true }]);
+            } else {
+              addedStatements.push(stmt);
+              update((s) => ({ ...s, statements: [...s.statements, stmt] }));
+              const saved = await saveFile(stmt.id, f.name, f.data);
+              if (saved.ok) update((s) => ({ ...s, statements: s.statements.map((x) => (x.id === stmt.id ? { ...x, fileStored: true } : x)) }));
+              setLog((l) => [...l, { text: `${f.name}: bank statement, ${proveStatement(stmt).label}. See Bank statements.${saved.ok ? "" : ` ${saved.reason}`}`, ok: true }]);
+            }
+            done++;
+            continue;
+          }
+        } catch (err) {
+          if (err instanceof PdfPasswordError) {
+            setLog((l) => [...l, { text: `${f.name}: password protected. Add it on the Bank statements page to unlock it there.`, ok: false }]);
+            continue;
+          }
+          /* not readable as a statement: fall through and read it as a bill */
+        }
+      }
       try {
         const file = new File([f.data as unknown as BlobPart], f.name, { type: mimeFor(f.name) });
         const { mode: m, bill: e } = await extractFile(file);

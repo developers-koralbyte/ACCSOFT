@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "./nav";
+import { SITE } from "@/lib/site-config";
+import GuidedDemo from "./guided-demo";
 
 export const metadata: Metadata = {
-  title: "DocFlow",
+  title: SITE.name,
   description: "Client documents to approved Xero bills, built for Malaysian bookkeeping firms",
 };
 
@@ -13,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Nav />
         {children}
+        <GuidedDemo />
       </body>
     </html>
   );

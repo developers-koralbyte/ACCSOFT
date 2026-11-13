@@ -1,94 +1,182 @@
-"use client";
+import Link from "next/link";
+import { HEADLINE, GUARANTEE } from "@/lib/copy";
+import { FAQ, FEATURES, POINTS } from "@/lib/landing-content";
+import { fmtRMShort } from "@/lib/money";
+import { PRICING } from "@/lib/pricing";
+import { SITE } from "@/lib/site-config";
+import { StartGuidedDemoButton } from "./guided-demo";
+import { Shot } from "./lightbox";
+import { CtaRow, PublicFooter, Tick } from "./public-parts";
+import WalkthroughForm from "./walkthrough-form";
 
-import { useEffect } from "react";
-import { readMode, useDocflow } from "@/lib/store";
+export const metadata = { title: `${SITE.name}: every client's month complete by the 5th` };
 
-function reminderText(clientName: string, missing: number): string {
+export default function Landing() {
+  const p = PRICING;
   return (
-    `Hi, this is a friendly reminder from your accounting team. ` +
-    `We are still missing about ${missing} receipts and invoices for ${clientName} this month. ` +
-    `Please send photos or PDFs here on WhatsApp so we can close your books on time. Terima kasih!`
-  );
-}
+    <main className="pub">
+      {/* 1. Hero */}
+      <section className="p-hero">
+        <div className="p-wrap p-hero-grid">
+          <div className="p-hero-text">
+            <p className="p-eyebrow">For accounting firms</p>
+            <h1>{HEADLINE}</h1>
+            <p className="p-lead">
+              {SITE.name} gives your firm a finished month, not just a document reader: documents collected, bank statements proven to the cent, every line explained, and a month you can sign off and hand over.
+            </p>
+            <div className="p-cta">
+              <Link className="p-btn primary lg" href="/board">Open the demo</Link>
+              <StartGuidedDemoButton className="p-btn secondary lg" />
+              <Link className="p-btn ghost lg" href="/pricing">See pricing</Link>
+            </div>
+            <p className="p-fine"><span className="p-dot" aria-hidden="true" /> Demo: sample data. Everything you see in the demo is invented, runs in your browser, and nothing is uploaded.</p>
+          </div>
+          <div className="p-shots">
+            <figure className="p-frame p-frame-main">
+              <div className="p-bar" aria-hidden="true"><i /><i /><i /></div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/screens/hero-board.jpg" alt="The month board: one row per client with five stages each" width="1280" height="640" />
+            </figure>
+            <figure className="p-frame p-frame-float">
+              <div className="p-bar" aria-hidden="true"><i /><i /><i /></div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/screens/hero-proof.jpg" alt="A bank statement shown as proven to the cent, with the balance sums" width="940" height="420" />
+            </figure>
+          </div>
+        </div>
+      </section>
 
-export default function ClientsPage() {
-  const { state, update, reset } = useDocflow();
+      {/* 2. Three supporting points */}
+      <section className="p-sec p-points-sec">
+        <div className="p-wrap p-points">
+          {POINTS.map((pt) => (
+            <div className="p-card" key={pt.title}>
+              <Tick />
+              <h2>{pt.title}</h2>
+              <p>{pt.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-  // SMEs using "My business" mode land on their own dashboard instead of the firm client list
-  useEffect(() => {
-    if (readMode() === "business") window.location.replace("/business");
-  }, []);
+      {/* 3. Feature rows */}
+      <section className="p-sec" id="how">
+        <div className="p-wrap">
+          <div className="p-sec-head">
+            <p className="p-eyebrow">How it works</p>
+            <h2>From a pile of documents to a signed-off month</h2>
+            <p>Every screen below is a real screen from the demo, shown with invented sample data. Click a screen to enlarge it.</p>
+          </div>
+          <div className="p-rows">
+            {FEATURES.map((f, i) => (
+              <div className={`p-row${i % 2 === 1 ? " flip" : ""}`} key={f.id}>
+                <div className="p-row-text">
+                  <span className="p-row-n">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </div>
+                <div className="p-row-shot">
+                  <Shot src={f.img} alt={f.alt} w={f.w} h={f.h} caption={`${f.title}. Sample data.`} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <CtaRow />
+        </div>
+      </section>
 
-  if (!state) return <main className="page">Loading...</main>;
+      {/* 4. Guarantee */}
+      <section className="p-band">
+        <div className="p-wrap p-band-in">
+          <p className="p-band-eyebrow">Our guarantee</p>
+          <p className="p-band-text">{GUARANTEE}</p>
+        </div>
+      </section>
 
-  const { clients, bills } = state;
-  const expected = clients.reduce((a, c) => a + c.docsExpected, 0);
-  const received = clients.reduce((a, c) => a + c.docsReceived, 0);
-  const pending = bills.filter((b) => b.status === "pending").length;
-  const incomplete = clients.filter((c) => c.docsReceived < c.docsExpected).length;
+      {/* 5. Pricing summary */}
+      <section className="p-sec" id="pricing">
+        <div className="p-wrap">
+          <div className="p-sec-head center">
+            <p className="p-eyebrow">Pricing</p>
+            <h2>Simple pricing for accounting firms</h2>
+            <p>You pay for active clients. An active client is one that sends at least one document or statement in the month.</p>
+          </div>
+          <div className="p-prices">
+            <div className="p-price-card featured">
+              <h3>Firm</h3>
+              <div className="p-price">{fmtRMShort(p.firmBase)}<span> per month</span></div>
+              <ul className="p-checks">
+                <li><Tick />Includes {p.includedClients} active clients</li>
+                <li><Tick />Then {fmtRMShort(p.midRate)} per active client per month, and {fmtRMShort(p.highRate)} from the {p.midUpTo + 1}st</li>
+                <li><Tick />Each client includes {p.docsPerClient} documents and {p.statementsPerClient} bank statements a month</li>
+              </ul>
+            </div>
+            <div className="p-price-card">
+              <h3>Year-end catch-up pack</h3>
+              <div className="p-price">{fmtRMShort(p.yearEndPack)}<span> per company, one-off</span></div>
+              <ul className="p-checks">
+                <li><Tick />Up to twelve statements for one account in one go</li>
+                <li><Tick />Proof and continuity across the year</li>
+              </ul>
+            </div>
+            <div className="p-price-card">
+              <h3>Business (self-serve)</h3>
+              <div className="p-price">Free<span> up to {p.businessFreeDocs} documents a month</span></div>
+              <ul className="p-checks">
+                <li><Tick />For a business keeping its own documents</li>
+                <li><Tick />Invite your accountant by WhatsApp</li>
+              </ul>
+            </div>
+          </div>
+          <p className="p-price-foot">
+            Founding firm offer: the first {p.foundingFirms} firms get {p.foundingFreeDays} days free, then {p.foundingDiscountPercent}% off for {p.foundingDiscountMonths} months.{" "}
+            <Link href="/pricing">See the full pricing and the calculator</Link>
+          </p>
+        </div>
+      </section>
 
-  function chase(id: string) {
-    const c = clients.find((x) => x.id === id);
-    if (!c) return;
-    const missing = c.docsExpected - c.docsReceived;
-    const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(reminderText(c.name, missing))}`;
-    window.open(url, "_blank", "noopener");
-    update((s) => ({
-      ...s,
-      clients: s.clients.map((x) => (x.id === id ? { ...x, lastReminder: new Date().toISOString() } : x)),
-    }));
-  }
+      {/* 6. Book a walkthrough */}
+      <section className="p-sec tint" id="walkthrough">
+        <div className="p-wrap p-walk">
+          <div className="p-walk-text">
+            <p className="p-eyebrow">Book a 15-minute walkthrough</p>
+            <h2>See it on your own kind of month</h2>
+            <p>Tell us a little about your firm and we will walk you through the demo. You can also send us one bank statement and see it proven, matched and ready to export.</p>
+          </div>
+          <div className="p-walk-form">
+            <WalkthroughForm />
+          </div>
+        </div>
+      </section>
 
-  return (
-    <main className="page">
-      <h1>Clients</h1>
-      <p className="sub">See which clients still owe documents this month, and chase them in one click.</p>
+      {/* 7. FAQ */}
+      <section className="p-sec" id="faq">
+        <div className="p-wrap p-faq-wrap">
+          <div className="p-sec-head center">
+            <p className="p-eyebrow">FAQ</p>
+            <h2>Straight answers</h2>
+          </div>
+          <div className="p-faq">
+            {FAQ.map((f) => (
+              <details key={f.q}>
+                <summary>{f.q}</summary>
+                <div className="p-faq-a">{f.a.map((para, i) => <p key={i}>{para}</p>)}</div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      <div className="banner">
-        Demo data is loaded so you can click through the full flow. Saved in this browser only.{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); reset(); }}>Reset demo data</a>
-      </div>
+      {/* 8. Final call to action */}
+      <section className="p-band final">
+        <div className="p-wrap p-band-in center">
+          <h2>Ready to see a finished month?</h2>
+          <p>Open the demo and try it on invented sample data, or book a short walkthrough.</p>
+          <CtaRow light />
+        </div>
+      </section>
 
-      <div className="grid kpis">
-        <div className="card kpi"><div className="n">{clients.length}</div><div className="l">Active clients</div></div>
-        <div className="card kpi"><div className="n">{received}/{expected}</div><div className="l">Documents received this month</div></div>
-        <div className="card kpi"><div className="n">{incomplete}</div><div className="l">Clients still owing documents</div></div>
-        <div className="card kpi"><div className="n">{pending}</div><div className="l">Bills waiting for your approval</div></div>
-      </div>
-
-      <div className="card" style={{ padding: 0 }}>
-        <table>
-          <thead>
-            <tr><th>Client</th><th>Documents this month</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody>
-            {clients.map((c) => {
-              const pct = Math.round((c.docsReceived / c.docsExpected) * 100);
-              const done = c.docsReceived >= c.docsExpected;
-              return (
-                <tr key={c.id}>
-                  <td><strong>{c.name}</strong></td>
-                  <td>
-                    <div className={`bar ${done ? "done" : ""}`}><span style={{ width: `${Math.min(100, pct)}%` }} /></div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{c.docsReceived} of {c.docsExpected}</div>
-                  </td>
-                  <td>
-                    {done ? <span className="tag ok">Complete</span> : <span className="tag warn">{c.docsExpected - c.docsReceived} missing</span>}
-                    {c.lastReminder && (
-                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                        Chased {new Date(c.lastReminder).toLocaleDateString("en-MY")}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    {!done && <button className="btn" onClick={() => chase(c.id)}>Chase on WhatsApp</button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <PublicFooter />
     </main>
   );
 }

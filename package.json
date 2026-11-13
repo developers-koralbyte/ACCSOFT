@@ -5,11 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "vitest run",
+    "postinstall": "node scripts/copy-pdf-worker.mjs",
+    "predev": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs",
+    "samples": "node scripts/make-sample-pdfs.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.2",
     "next": "14.2.15",
+    "pdfjs-dist": "^3.11.174",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
@@ -17,6 +23,7 @@
     "@types/node": "20.14.0",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "vitest": "^2.1.8"
   }
 }
