@@ -8,7 +8,7 @@ This is a working demo on invented sample data. This guide gives the demo script
 
 | Route | What it is |
 |---|---|
-| `/` | Public landing page. "Open the demo" goes to `/board`. |
+| `/` | Public landing page: hero, three points, seven feature rows with click-to-enlarge screenshots, guarantee, pricing summary, walkthrough form, FAQ. "Open the demo" goes to `/board`. |
 | `/pricing` | Public pricing page with a calculator. |
 | `/board` | The month board (firm home screen). |
 | `/clients` | Client list, WhatsApp chase, ledger and financial year end settings. |
@@ -90,6 +90,8 @@ Simulated or limited:
 - WhatsApp opens a prefilled wa.me link. There is no Business API. All sending goes through `sendWhatsApp` in `lib/chase/send.ts`.
 - Storage is the browser's localStorage and IndexedDB only, behind `lib/store.ts` and `lib/files.ts`. No login, no database.
 - Without `ANTHROPIC_API_KEY`: document extraction returns sample data, scanned statements are refused with a clear message, and model match suggestions are off. With a key those paths are live. They could not be tested without a key. The validation of the model's matches (exact sums in sen) is tested.
+- The walkthrough form has no server behind it. It opens the visitor's email app with a prefilled message to the address in `lib/site-config.ts`, and nothing is stored. Copy for the landing page is in `lib/landing-content.ts`; the form checks are in `lib/walkthrough.ts`.
+- Live forwarding of WhatsApp messages to a number is in development and is described that way on the public pages. Today a chat export is imported.
 - The landing page screenshots are real screens of the demo with sample data. They are static images, so retake them if the screens change a lot.
 
 The "Demo: sample data" badge shows on every app screen while the app runs on seeded data or demo extraction. It is not shown on the public landing and pricing pages.

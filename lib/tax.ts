@@ -64,6 +64,14 @@ export function suggestTaxCodeOn(tax: number, subtotal: number, date: string): s
   return bestDiff < 0.012 ? best : "NONE";
 }
 
+// A short label for narrow table cells, for example "Service 8%". Built from the rate table.
+export function shortLabelFor(code: string): string {
+  const r = TAX_RATES.find((x) => x.code === code);
+  if (!r) return code;
+  if (r.rate === 0) return "No tax";
+  return `${code.startsWith("SVC") ? "Service" : "Sales"} ${Math.round(r.rate * 1000) / 10}%`;
+}
+
 export interface TaxOption {
   code: string;
   label: string;
@@ -72,10 +80,10 @@ export interface TaxOption {
 
 // The tax codes to offer for a document or bank line dated `date`: only codes in force that day. If the item already
 // carries a code that was not valid on its date, it is kept at the end and flagged, so nothing silently changes.
-export function taxOptionsFor(date: string, current?: string): TaxOption[] {
-  const options: TaxOption[] = codesOn(date).map((r) => ({ code: r.code, label: r.label, valid: true }));
+export function taxOptionsFor(date: string, current?: string, short = false): TaxOption[] {
+  const options: TaxOption[] = codesOn(date).map((r) => ({ code: r.code, label: short ? shortLabelFor(r.code) : r.label, valid: true }));
   if (current && !options.some((o) => o.code === current)) {
-    options.push({ code: current, label: `${labelFor(current)} (not valid on this date)`, valid: false });
+    options.push({ code: current, label: `${short ? shortLabelFor(current) : labelFor(current)} (not valid on this date)`, valid: false });
   }
   return options;
 }

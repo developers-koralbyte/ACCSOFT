@@ -5,111 +5,121 @@ import { useState } from "react";
 import { GUARANTEE } from "@/lib/copy";
 import { fmtRM, fmtRMShort } from "@/lib/money";
 import { firmQuote, PRICING } from "@/lib/pricing";
-import { emailContactUrl, SITE, whatsappConfigured, whatsappContactUrl } from "@/lib/site-config";
+import { emailContactUrl, SITE } from "@/lib/site-config";
+import { CtaRow, PublicFooter, Tick } from "../public-parts";
 
 export default function PricingPage() {
   const [clients, setClients] = useState("12");
-  const n = Number(clients);
-  const q = firmQuote(n);
+  const q = firmQuote(Number(clients));
   const p = PRICING;
 
   return (
-    <main>
-      <section className="hero compact">
-        <div className="wrap">
+    <main className="pub">
+      <section className="p-band hero-band">
+        <div className="p-wrap p-band-in center">
+          <p className="p-band-eyebrow">Pricing</p>
           <h1>Simple pricing for accounting firms</h1>
-          <p className="lead">You pay for active clients. Prices are in Malaysian ringgit.</p>
+          <p className="p-band-sub">You pay for active clients. Prices are in Malaysian ringgit and do not include tax.</p>
         </div>
       </section>
 
-      <section className="wrap">
-        <div className="plans">
-          <div className="card plan main">
-            <h2>Firm</h2>
-            <div className="price">{fmtRMShort(p.firmBase)}<span> per month</span></div>
-            <ul>
-              <li>Includes {p.includedClients} active clients</li>
-              <li>Then {fmtRMShort(p.midRate)} per active client per month</li>
-              <li>{fmtRMShort(p.highRate)} per active client from the {p.midUpTo + 1}st</li>
-              <li>Each client includes {p.docsPerClient} documents and {p.statementsPerClient} bank statements a month</li>
-              <li>Extra documents {fmtRMShort(p.extraDocument)} each</li>
-            </ul>
-          </div>
-          <div className="card plan">
-            <h2>Year-end catch-up pack</h2>
-            <div className="price">{fmtRMShort(p.yearEndPack)}<span> per company, one-off</span></div>
-            <ul>
-              <li>Up to twelve statements for one account in one go</li>
-              <li>Proof and continuity across the year</li>
-              <li>One bundle of audit packs for every approved month</li>
-            </ul>
-          </div>
-          <div className="card plan">
-            <h2>Business (self-serve)</h2>
-            <div className="price">Free<span> up to {p.businessFreeDocs} documents a month</span></div>
-            <ul>
-              <li>For a business keeping its own documents</li>
-              <li>Invite your accountant by WhatsApp</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="card definition">
-          <strong>What is an active client?</strong> An active client is one that sends at least one document or statement in the month. A client that sends nothing that month costs nothing extra.
-        </div>
-
-        <div className="card founding">
-          <strong>Founding firm offer</strong>
-          <p style={{ margin: "4px 0 0" }}>
-            The first {p.foundingFirms} firms get {p.foundingFreeDays} days free, then {p.foundingDiscountPercent}% off for {p.foundingDiscountMonths} months.
-          </p>
-        </div>
-
-        <div className="card calc">
-          <h2 style={{ margin: "0 0 4px" }}>Calculator</h2>
-          <p className="sub" style={{ margin: "0 0 12px" }}>Enter the number of active clients in a month.</p>
-          <div className="row" style={{ marginBottom: 12 }}>
-            <div>
-              <label htmlFor="active">Active clients</label>
-              <input id="active" inputMode="numeric" value={clients} onChange={(e) => setClients(e.target.value.replace(/[^\d]/g, "").slice(0, 5))} />
+      <section className="p-sec tight">
+        <div className="p-wrap">
+          <div className="p-prices">
+            <div className="p-price-card featured">
+              <h2>Firm</h2>
+              <div className="p-price">{fmtRMShort(p.firmBase)}<span> per month</span></div>
+              <ul className="p-checks">
+                <li><Tick />Includes {p.includedClients} active clients</li>
+                <li><Tick />Then {fmtRMShort(p.midRate)} per active client per month</li>
+                <li><Tick />{fmtRMShort(p.highRate)} per active client from the {p.midUpTo + 1}st</li>
+                <li><Tick />Each client includes {p.docsPerClient} documents and {p.statementsPerClient} bank statements a month</li>
+                <li><Tick />Extra documents {fmtRMShort(p.extraDocument)} each</li>
+              </ul>
+            </div>
+            <div className="p-price-card">
+              <h2>Year-end catch-up pack</h2>
+              <div className="p-price">{fmtRMShort(p.yearEndPack)}<span> per company, one-off</span></div>
+              <ul className="p-checks">
+                <li><Tick />Up to twelve statements for one account in one go</li>
+                <li><Tick />Proof and continuity across the year</li>
+                <li><Tick />One bundle of audit packs for every approved month</li>
+              </ul>
+            </div>
+            <div className="p-price-card">
+              <h2>Business (self-serve)</h2>
+              <div className="p-price">Free<span> up to {p.businessFreeDocs} documents a month</span></div>
+              <ul className="p-checks">
+                <li><Tick />For a business keeping its own documents</li>
+                <li><Tick />Invite your accountant by WhatsApp</li>
+              </ul>
             </div>
           </div>
-          <div className="calc-out">
-            <div><div className="big" data-testid="monthly-total">{fmtRM(q.total)}</div><div className="l">per month</div></div>
-            <div><div className="big" data-testid="per-client">{q.perClient === null ? "n/a" : fmtRM(q.perClient)}</div><div className="l">per active client</div></div>
-            <div><div className="big">{fmtRM(q.founding)}</div><div className="l">per month with the founding offer, after the free {p.foundingFreeDays} days</div></div>
-          </div>
-          <table className="calc-lines">
-            <tbody>
-              {q.lines.map((l, i) => (
-                <tr key={i}>
-                  <td>{l.label}</td>
-                  <td className="num">{i === 0 ? "" : `${l.clients} x ${fmtRM(l.rate)}`}</td>
-                  <td className="num">{fmtRM(l.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="fine">Extra documents beyond {p.docsPerClient} per active client are {fmtRMShort(p.extraDocument)} each and are not included above. Taxes are not included.</p>
-        </div>
 
-        <div className="card guarantee-card">
-          <strong>Our guarantee</strong>
-          <p>{GUARANTEE}</p>
-        </div>
-
-        <div className="card contact" id="contact">
-          <div>
-            <h2 style={{ margin: 0 }}>Ready to try it?</h2>
-            <p className="sub" style={{ margin: "4px 0 0" }}>Send us one bank statement and we will show you the result.</p>
-          </div>
-          <div className="cta-row" style={{ margin: 0 }}>
-            {whatsappConfigured() && <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>}
-            <a className="btn" href={emailContactUrl()}>Email {SITE.email}</a>
-            <Link className="btn secondary" href="/board">Open the demo</Link>
+          <div className="p-notes">
+            <div className="p-note">
+              <strong>What is an active client?</strong>
+              <p>An active client is one that sends at least one document or statement in the month. A client that sends nothing that month is not counted for that month.</p>
+            </div>
+            <div className="p-note accent">
+              <strong>Founding firm offer</strong>
+              <p>The first {p.foundingFirms} firms get {p.foundingFreeDays} days free, then {p.foundingDiscountPercent}% off for {p.foundingDiscountMonths} months.</p>
+            </div>
           </div>
         </div>
       </section>
+
+      <section className="p-sec tint">
+        <div className="p-wrap">
+          <div className="p-calc">
+            <div className="p-calc-in">
+              <h2>Calculator</h2>
+              <p className="p-calc-sub">Enter the number of active clients in a month.</p>
+              <div className="p-field narrow">
+                <label htmlFor="active">Active clients</label>
+                <input id="active" inputMode="numeric" value={clients} onChange={(e) => setClients(e.target.value.replace(/[^\d]/g, "").slice(0, 5))} />
+              </div>
+            </div>
+            <div className="p-calc-out">
+              <div className="p-calc-figs">
+                <div><div className="p-big" data-testid="monthly-total">{fmtRM(q.total)}</div><div className="p-l">per month</div></div>
+                <div><div className="p-big" data-testid="per-client">{q.perClient === null ? "n/a" : fmtRM(q.perClient)}</div><div className="p-l">per active client</div></div>
+                <div><div className="p-big">{fmtRM(q.founding)}</div><div className="p-l">per month with the founding offer, after the free {p.foundingFreeDays} days</div></div>
+              </div>
+              <table className="p-calc-lines">
+                <tbody>
+                  {q.lines.map((l, i) => (
+                    <tr key={i}>
+                      <td>{l.label}</td>
+                      <td className="num">{i === 0 ? "" : `${l.clients} x ${fmtRM(l.rate)}`}</td>
+                      <td className="num">{fmtRM(l.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="p-small">Extra documents beyond {p.docsPerClient} per active client are {fmtRMShort(p.extraDocument)} each and are not included above.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="p-band">
+        <div className="p-wrap p-band-in">
+          <p className="p-band-eyebrow">Our guarantee</p>
+          <p className="p-band-text">{GUARANTEE}</p>
+        </div>
+      </section>
+
+      <section className="p-band final">
+        <div className="p-wrap p-band-in center">
+          <h2>Ready to try it?</h2>
+          <p>Open the demo on invented sample data, book a short walkthrough, or email <a href={emailContactUrl()}>{SITE.email}</a>.</p>
+          <CtaRow light />
+          <p className="p-small light"><Link href="/#faq">Read the FAQ</Link></p>
+        </div>
+      </section>
+
+      <PublicFooter />
     </main>
   );
 }

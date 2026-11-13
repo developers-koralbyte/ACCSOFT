@@ -46,3 +46,13 @@ describe("tax dropdown options", () => {
     expect(taxOptionsFor("2026-10-05", "SVC8").every((x) => x.valid)).toBe(true);
   });
 });
+
+describe("short tax labels for narrow tables", () => {
+  it("are built from the rate table", async () => {
+    const { shortLabelFor } = await import("@/lib/tax");
+    expect(shortLabelFor("NONE")).toBe("No tax");
+    expect(shortLabelFor("SVC8")).toBe("Service 8%");
+    expect(shortLabelFor("ST10")).toBe("Sales 10%");
+    expect(taxOptionsFor("2026-10-05", undefined, true).map((o) => o.label)).toEqual(["No tax", "Service 6%", "Service 8%", "Sales 10%", "Sales 5%"]);
+  });
+});

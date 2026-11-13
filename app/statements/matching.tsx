@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { fmtDate, fmtRM } from "@/lib/money";
-import { taxOptionsFor } from "@/lib/tax";
+import { labelFor, taxOptionsFor } from "@/lib/tax";
 import { ALL_CATEGORIES } from "@/lib/match/categories";
 import { linkDocument, markBankOnly, rejectSuggestion, undoDecision } from "@/lib/match/actions";
 import { buildModelRequest, validateModelSuggestions } from "@/lib/match/model";
@@ -203,7 +203,7 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
               const l = lineOf(r);
               const d = cur(r);
               const matchedBills = r.billIds.map((id) => billById.get(id)).filter((b): b is Bill => Boolean(b));
-              const taxOptions = taxOptionsFor(l.date, d.tax);
+              const taxOptions = taxOptionsFor(l.date, d.tax, true);
               const hasDecision = Boolean(decisions[r.key]?.billIds?.length || decisions[r.key]?.bankOnly || decisions[r.key]?.answer);
               const stateClass = r.state === "matched" ? (r.accepted ? "accepted" : "ok") : r.state === "suggested" ? "warn" : r.state === "answered" ? "answered" : "";
               return (
@@ -250,7 +250,7 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
                     </select>
                   </td>
                   <td style={{ minWidth: 0 }}>
-                    <select aria-label="Tax code" disabled={locked} value={d.tax} onChange={(e) => setDraft({ ...draft, [r.key]: { ...d, tax: e.target.value } })}>
+                    <select aria-label="Tax code" title={labelFor(d.tax)} disabled={locked} value={d.tax} onChange={(e) => setDraft({ ...draft, [r.key]: { ...d, tax: e.target.value } })}>
                       {taxOptions.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                     </select>
                   </td>
@@ -270,7 +270,7 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
                     {!locked && r.state === "unexplained" && l.debit > 0 && (
                       <div style={{ display: "grid", gap: 6 }}>
                         <select aria-label="Link a document" value={link[r.key] ?? ""} onChange={(e) => setLink({ ...link, [r.key]: e.target.value })}>
-                          <option value="">Link a document...</option>
+                          <option value="">Link bill</option>
                           {freeBills.map((b) => <option key={b.id} value={b.id}>{b.supplier} {fmtRM(Math.round(b.total * 100))}</option>)}
                         </select>
                         <div>

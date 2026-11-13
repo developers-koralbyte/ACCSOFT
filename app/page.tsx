@@ -1,26 +1,21 @@
 import Link from "next/link";
 import { HEADLINE, GUARANTEE } from "@/lib/copy";
-import { emailContactUrl, SITE, whatsappConfigured, whatsappContactUrl } from "@/lib/site-config";
+import { FAQ, FEATURES, POINTS } from "@/lib/landing-content";
+import { fmtRMShort } from "@/lib/money";
+import { PRICING } from "@/lib/pricing";
+import { SITE } from "@/lib/site-config";
 import { StartGuidedDemoButton } from "./guided-demo";
+import { Shot } from "./lightbox";
+import { CtaRow, PublicFooter, Tick } from "./public-parts";
+import WalkthroughForm from "./walkthrough-form";
 
 export const metadata = { title: `${SITE.name}: every client's month complete by the 5th` };
 
-const POINTS = [
-  { title: "Collect documents from WhatsApp", text: "Today you import a chat export with its photos and PDFs in one go, and every document is read for review. Live forwarding to a WhatsApp number is in development." },
-  { title: "Every bank statement is proven to the cent", text: "Opening balance plus money in, less money out, must equal the closing balance, and every running balance must agree line by line. A break is pointed to the exact line." },
-  { title: "Works with the ledger you already use", text: "Export approved bank lines for Xero or QuickBooks today. SQL Account, AutoCount and Zoho Books are in draft until their templates are checked. Xero draft bill posting is built in." },
-];
-
-const STEPS = [
-  { n: 1, title: "Documents arrive", text: `Export a client's WhatsApp chat with its photos and PDFs and import it. ${SITE.name} reads each one and lists them for review, with warnings for mismatched totals, duplicates and low confidence. Live forwarding to a WhatsApp number is in development.`, img: "/screens/documents.jpg", alt: "The review queue with documents read from WhatsApp" },
-  { n: 2, title: "The statement is proven", text: "Upload a bank statement PDF. It is read in your browser and proven to the cent, with the exact line named if anything breaks.", img: "/screens/proof.jpg", alt: "A bank statement shown as proven to the cent" },
-  { n: 3, title: "Lines are matched, and the rest are asked", text: "Bank lines are matched to documents by clear rules, and each rule is recorded. Payments nobody can explain become short questions to the client on WhatsApp.", img: "/screens/matching.jpg", alt: "Bank lines matched to documents, with the rule shown for each" },
-  { n: 4, title: "The month is approved and exported", text: "A board shows every client's month at a glance. Two people sign off, the month locks, and you download the audit pack and your ledger file.", img: "/screens/board.jpg", alt: "The month board with a row for each client" },
-];
-
 export default function Landing() {
+  const p = PRICING;
   return (
-    <main>
+    <main className="pub">
+      {/* 1. Hero */}
       <section className="p-hero">
         <div className="p-wrap p-hero-grid">
           <div className="p-hero-text">
@@ -45,67 +40,143 @@ export default function Landing() {
             <figure className="p-frame p-frame-float">
               <div className="p-bar" aria-hidden="true"><i /><i /><i /></div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/screens/hero-proof.jpg" alt="A bank statement shown as proven to the cent" width="1100" height="330" />
+              <img src="/screens/hero-proof.jpg" alt="A bank statement shown as proven to the cent, with the balance sums" width="940" height="420" />
             </figure>
           </div>
         </div>
       </section>
 
-      <section className="wrap">
-        <div className="points">
-          {POINTS.map((p) => (
-            <div className="card point" key={p.title}>
-              <h2>{p.title}</h2>
-              <p>{p.text}</p>
+      {/* 2. Three supporting points */}
+      <section className="p-sec p-points-sec">
+        <div className="p-wrap p-points">
+          {POINTS.map((pt) => (
+            <div className="p-card" key={pt.title}>
+              <Tick />
+              <h2>{pt.title}</h2>
+              <p>{pt.text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="wrap" id="how">
-        <h2 className="section-title">How it works</h2>
-        <div className="steps-how">
-          {STEPS.map((s) => (
-            <div className="how" key={s.n}>
-              <div className="how-text">
-                <div className="how-n">Step {s.n}</div>
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
+      {/* 3. Feature rows */}
+      <section className="p-sec" id="how">
+        <div className="p-wrap">
+          <div className="p-sec-head">
+            <p className="p-eyebrow">How it works</p>
+            <h2>From a pile of documents to a signed-off month</h2>
+            <p>Every screen below is a real screen from the demo, shown with invented sample data. Click a screen to enlarge it.</p>
+          </div>
+          <div className="p-rows">
+            {FEATURES.map((f, i) => (
+              <div className={`p-row${i % 2 === 1 ? " flip" : ""}`} key={f.id}>
+                <div className="p-row-text">
+                  <span className="p-row-n">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </div>
+                <div className="p-row-shot">
+                  <Shot src={f.img} alt={f.alt} w={f.w} h={f.h} caption={`${f.title}. Sample data.`} />
+                </div>
               </div>
-              <figure>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.img} alt={s.alt} loading="lazy" />
-                <figcaption>A real screen from the demo, with sample data.</figcaption>
-              </figure>
+            ))}
+          </div>
+          <CtaRow />
+        </div>
+      </section>
+
+      {/* 4. Guarantee */}
+      <section className="p-band">
+        <div className="p-wrap p-band-in">
+          <p className="p-band-eyebrow">Our guarantee</p>
+          <p className="p-band-text">{GUARANTEE}</p>
+        </div>
+      </section>
+
+      {/* 5. Pricing summary */}
+      <section className="p-sec" id="pricing">
+        <div className="p-wrap">
+          <div className="p-sec-head center">
+            <p className="p-eyebrow">Pricing</p>
+            <h2>Simple pricing for accounting firms</h2>
+            <p>You pay for active clients. An active client is one that sends at least one document or statement in the month.</p>
+          </div>
+          <div className="p-prices">
+            <div className="p-price-card featured">
+              <h3>Firm</h3>
+              <div className="p-price">{fmtRMShort(p.firmBase)}<span> per month</span></div>
+              <ul className="p-checks">
+                <li><Tick />Includes {p.includedClients} active clients</li>
+                <li><Tick />Then {fmtRMShort(p.midRate)} per active client per month, and {fmtRMShort(p.highRate)} from the {p.midUpTo + 1}st</li>
+                <li><Tick />Each client includes {p.docsPerClient} documents and {p.statementsPerClient} bank statements a month</li>
+              </ul>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="wrap">
-        <div className="card guarantee-card">
-          <strong>Our guarantee</strong>
-          <p>{GUARANTEE}</p>
-        </div>
-      </section>
-
-      <section className="wrap" id="contact">
-        <div className="card contact">
-          <div>
-            <h2 style={{ margin: 0 }}>Talk to us</h2>
-            <p className="sub" style={{ margin: "4px 0 0" }}>Send us one bank statement and see it proven, matched and ready to export.</p>
+            <div className="p-price-card">
+              <h3>Year-end catch-up pack</h3>
+              <div className="p-price">{fmtRMShort(p.yearEndPack)}<span> per company, one-off</span></div>
+              <ul className="p-checks">
+                <li><Tick />Up to twelve statements for one account in one go</li>
+                <li><Tick />Proof and continuity across the year</li>
+              </ul>
+            </div>
+            <div className="p-price-card">
+              <h3>Business (self-serve)</h3>
+              <div className="p-price">Free<span> up to {p.businessFreeDocs} documents a month</span></div>
+              <ul className="p-checks">
+                <li><Tick />For a business keeping its own documents</li>
+                <li><Tick />Invite your accountant by WhatsApp</li>
+              </ul>
+            </div>
           </div>
-          <div className="cta-row" style={{ margin: 0 }}>
-            {whatsappConfigured() && <a className="btn" href={whatsappContactUrl()} target="_blank" rel="noopener noreferrer">WhatsApp us</a>}
-            <a className="btn" href={emailContactUrl()}>Email {SITE.email}</a>
+          <p className="p-price-foot">
+            Founding firm offer: the first {p.foundingFirms} firms get {p.foundingFreeDays} days free, then {p.foundingDiscountPercent}% off for {p.foundingDiscountMonths} months.{" "}
+            <Link href="/pricing">See the full pricing and the calculator</Link>
+          </p>
+        </div>
+      </section>
+
+      {/* 6. Book a walkthrough */}
+      <section className="p-sec tint" id="walkthrough">
+        <div className="p-wrap p-walk">
+          <div className="p-walk-text">
+            <p className="p-eyebrow">Book a 15-minute walkthrough</p>
+            <h2>See it on your own kind of month</h2>
+            <p>Tell us a little about your firm and we will walk you through the demo. You can also send us one bank statement and see it proven, matched and ready to export.</p>
+          </div>
+          <div className="p-walk-form">
+            <WalkthroughForm />
           </div>
         </div>
       </section>
 
-      <footer className="wrap site-foot">
-        <span>{SITE.name}{SITE.workingName ? " (working name)" : ""}</span>
-        <span><Link href="/pricing">Pricing</Link> | <Link href="/board">Open the demo</Link></span>
-      </footer>
+      {/* 7. FAQ */}
+      <section className="p-sec" id="faq">
+        <div className="p-wrap p-faq-wrap">
+          <div className="p-sec-head center">
+            <p className="p-eyebrow">FAQ</p>
+            <h2>Straight answers</h2>
+          </div>
+          <div className="p-faq">
+            {FAQ.map((f) => (
+              <details key={f.q}>
+                <summary>{f.q}</summary>
+                <div className="p-faq-a">{f.a.map((para, i) => <p key={i}>{para}</p>)}</div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Final call to action */}
+      <section className="p-band final">
+        <div className="p-wrap p-band-in center">
+          <h2>Ready to see a finished month?</h2>
+          <p>Open the demo and try it on invented sample data, or book a short walkthrough.</p>
+          <CtaRow light />
+        </div>
+      </section>
+
+      <PublicFooter />
     </main>
   );
 }
