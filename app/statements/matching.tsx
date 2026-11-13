@@ -10,6 +10,8 @@ import type { LineDecision, LineResult, LineState, PayeeMemory, Reconciliation }
 import type { AppState, Bill } from "@/lib/types";
 import type { Statement } from "@/lib/statements/types";
 import { useAnswerFlow, type Act } from "../answer-flow";
+import { SnapshotStatementView } from "../snapshot-view";
+import type { SnapBill, SnapStatement } from "@/lib/month/types";
 
 const STATE_LABEL: Record<LineState, string> = {
   matched: "Matched",
@@ -29,11 +31,13 @@ export interface MatchingProps {
   live: boolean;
   by: string;
   locked: boolean;
+  snapshot?: SnapStatement; // stored on approval, shown instead of live results for a locked month
+  snapBills?: SnapBill[];
   update: (fn: (s: AppState) => AppState) => void;
   act: Act;
 }
 
-export default function Matching({ stmt, clientId, month, bills, recon, decisions, memory, live, by, locked, update, act }: MatchingProps & { stmt: Statement }) {
+export default function Matching({ stmt, clientId, month, bills, recon, decisions, memory, live, by, locked, snapshot, snapBills, update, act }: MatchingProps & { stmt: Statement }) {
   const summary = recon.summaries.get(stmt.id);
   const [draft, setDraft] = useState<Record<string, { category: string; tax: string }>>({});
   const [link, setLink] = useState<Record<string, string>>({});
@@ -64,6 +68,15 @@ export default function Matching({ stmt, clientId, month, bills, recon, decision
         return n;
       }),
   });
+
+  if (locked && snapshot) {
+    return (
+      <>
+        <div className="issue info" style={{ marginTop: 14 }}>This month is approved and locked. This is the result stored on approval, and it does not change when bills are edited later. Reopen the month to change it.</div>
+        <SnapshotStatementView snap={snapshot} bills={snapBills ?? []} />
+      </>
+    );
+  }
 
   if (!summary) return null;
 

@@ -4,6 +4,7 @@ import { isValidOn, labelFor } from "../tax";
 import type { Bill } from "../types";
 import { proveStatement } from "../statements/proof";
 import type { Statement, StmtLine } from "../statements/types";
+import type { SnapStatement } from "../month/types";
 import { classifyBankOnly } from "./categories";
 import { findMemory } from "./memory";
 import { normalisePayee, payeeMatches, refMatches } from "./normalise";
@@ -55,6 +56,8 @@ export interface ReconcileInput {
   decisions: Record<string, LineDecision>;
   memory: Record<string, MemoryEntry>; // that client's payee memory
   modelSuggestions?: ModelSuggestion[];
+  // Statements of approved months: their stored snapshot is used as is, and the documents they used stay used.
+  frozen?: Record<string, SnapStatement>;
 }
 
 export const lineKey = (statementId: string, lineId: string) => `${statementId}:${lineId}`;
@@ -74,7 +77,36 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
   // Which statements can be matched: proven, or totals only (with a warning). Breaks and incomplete ones are blocked.
   const items: Item[] = [];
   const ordered = [...input.statements].sort((a, b) => (a.periodEnd < b.periodEnd ? -1 : a.periodEnd > b.periodEnd ? 1 : 0));
+  const frozen = input.frozen ?? {};
   for (const s of ordered) {
+    const snap = frozen[s.id];
+    if (snap) {
+      // approved: use what was stored on approval, whatever has happened to bills since
+      for (const sl of snap.lines) {
+        sl.billIds.forEach((id) => consumed.add(id));
+        results.set(`${s.id}:${sl.lineId}`, {
+          key: `${s.id}:${sl.lineId}`,
+          statementId: s.id,
+          lineId: sl.lineId,
+          lineNo: sl.lineNo,
+          state: sl.state,
+          rule: sl.rule as RuleId | undefined,
+          ruleLabel: sl.ruleLabel,
+          billIds: sl.billIds,
+          reason: "Approved: stored on approval.",
+          category: sl.category,
+          taxCode: sl.taxCode,
+          categorySource: "you",
+          categoryConfirmed: sl.categoryConfirmed,
+          learned: sl.learned,
+          memoryKey: "",
+          accepted: sl.accepted,
+          answer: sl.answer,
+        });
+      }
+      summaries.set(s.id, { statementId: s.id, totalsOnly: snap.proofStatus === "totals-only", counts: snap.counts, bankOnlyToConfirm: 0, reconciled: snap.reconciled, outstanding: [] });
+      continue;
+    }
     const proof = proveStatement(s);
     if (proof.status === "break" || proof.status === "incomplete") {
       summaries.set(s.id, emptySummary(s.id, proof.status));
@@ -204,11 +236,13 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
       results.set(item.key, r);
       continue;
     }
-    const hit = decisions[item.key]?.bankOnly ? { category: decisions[item.key]?.category ?? "General expenses", label: "Marked bank only by you" } : classifyBankOnly(item.line.description, side);
+    // a rule label such as "Customer receipt" or "Bank charge" wins; "marked by you" is only for lines no rule recognises
+    const youMarked = Boolean(dec?.bankOnly);
+    const hit = classifyBankOnly(item.line.description, side) ?? (youMarked ? { category: dec?.category ?? "General expenses", label: "Marked bank only by you" } : null);
     if (hit) {
       results.set(item.key, build(item, "bank-only", memory, decisions, {
         ruleLabel: hit.label,
-        reason: decisions[item.key]?.bankOnly ? "You marked this line as bank only." : `${hit.label}: explained by the bank, no document needed. The category below is a proposal until you confirm it.`,
+        reason: youMarked ? `${hit.label}: you confirmed this line as bank only.` : `${hit.label}: explained by the bank, no document needed. The category below is a proposal until you confirm it.`,
         bankCategory: hit.category,
         bankLabel: hit.label,
       }));
@@ -223,7 +257,7 @@ export function reconcileClient(input: ReconcileInput): Reconciliation {
 
   // ---- summaries ----
   for (const s of ordered) {
-    if (summaries.has(s.id)) continue;
+    if (summaries.has(s.id) || frozen[s.id]) continue;
     const mine = s.lines.map((l) => results.get(lineKey(s.id, l.id))).filter((r): r is LineResult => Boolean(r));
     const counts = { matched: 0, suggested: 0, "bank-only": 0, unexplained: 0, answered: 0 };
     mine.forEach((r) => counts[r.state]++);

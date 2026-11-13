@@ -65,7 +65,8 @@ export default function Nav() {
         DocFlow<small>working name</small>
       </span>
       <nav className="nav">
-        {mode === "firm" ? link("/", "Clients") : link("/business", "My documents")}
+        {mode === "firm" ? link("/", "Month board") : link("/business", "My documents")}
+        {mode === "firm" && link("/clients", "Clients")}
         {link("/inbox", "Review queue")}
         {link("/statements", "Bank statements")}
         {link("/questions", "Client questions")}

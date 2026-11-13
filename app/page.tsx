@@ -1,94 +1,62 @@
 "use client";
 
-import { useEffect } from "react";
-import { readMode, useDocflow } from "@/lib/store";
+import { useEffect, useMemo, useState } from "react";
+import { readMode, useDocflow, useStaff } from "@/lib/store";
+import { useQueryParam } from "@/lib/useQuery";
+import { DEMO_MONTH } from "@/lib/config";
+import { boardRows, boardSummary } from "@/lib/board";
+import { monthName, monthOf } from "@/lib/money";
+import { BoardTable } from "./board-table";
+import { chaseClient } from "./chase-action";
 
-function reminderText(clientName: string, missing: number): string {
-  return (
-    `Hi, this is a friendly reminder from your accounting team. ` +
-    `We are still missing about ${missing} receipts and invoices for ${clientName} this month. ` +
-    `Please send photos or PDFs here on WhatsApp so we can close your books on time. Terima kasih!`
-  );
-}
-
-export default function ClientsPage() {
+export default function BoardPage() {
   const { state, update, reset } = useDocflow();
+  const staff = useStaff();
+  const [qMonth, setQMonth] = useQueryParam("month");
+  const [note, setNote] = useState("");
 
-  // SMEs using "My business" mode land on their own dashboard instead of the firm client list
+  // SMEs using "My business" mode land on their own dashboard instead of the firm board
   useEffect(() => {
     if (readMode() === "business") window.location.replace("/business");
   }, []);
 
+  const month = qMonth || DEMO_MONTH;
+  const rows = useMemo(() => (state ? boardRows(state, month, new Date()) : []), [state, month]);
   if (!state) return <main className="page">Loading...</main>;
 
-  const { clients, bills } = state;
-  const expected = clients.reduce((a, c) => a + c.docsExpected, 0);
-  const received = clients.reduce((a, c) => a + c.docsReceived, 0);
-  const pending = bills.filter((b) => b.status === "pending").length;
-  const incomplete = clients.filter((c) => c.docsReceived < c.docsExpected).length;
+  const sum = boardSummary(rows, month);
+  const months = Array.from(new Set([DEMO_MONTH, month, ...state.statements.map((s) => monthOf(s.periodEnd))])).sort().reverse();
 
-  function chase(id: string) {
-    const c = clients.find((x) => x.id === id);
-    if (!c) return;
-    const missing = c.docsExpected - c.docsReceived;
-    const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(reminderText(c.name, missing))}`;
-    window.open(url, "_blank", "noopener");
-    update((s) => ({
-      ...s,
-      clients: s.clients.map((x) => (x.id === id ? { ...x, lastReminder: new Date().toISOString() } : x)),
-    }));
+  function chase(clientId: string) {
+    const res = chaseClient(update, state!, clientId, month, staff.name);
+    setNote(res.ok ? "WhatsApp opened with the chase message ready. Press send there." : "Your browser blocked the WhatsApp window. Allow pop-ups to chase from here.");
   }
 
   return (
     <main className="page">
-      <h1>Clients</h1>
-      <p className="sub">See which clients still owe documents this month, and chase them in one click.</p>
+      <div className="section-head" style={{ margin: "0 0 4px" }}>
+        <h1 style={{ margin: 0 }}>{sum.headline}</h1>
+        <div>
+          <label style={{ display: "inline", marginRight: 8 }}>Month</label>
+          <select style={{ width: "auto" }} value={month} onChange={(e) => setQMonth(e.target.value)}>
+            {months.map((m) => <option key={m} value={m}>{monthName(m)}</option>)}
+          </select>
+        </div>
+      </div>
+      <p className="sub" style={{ marginBottom: 14 }}>
+        {sum.blockedLine || "Nothing is blocked."} Click any cell to open the exact work. Every stage is worked out from the data, never stored by hand.
+      </p>
+      {note && <div className="issue info">{note}</div>}
 
-      <div className="banner">
+      <div className="banner" style={{ marginBottom: 14 }}>
         Demo data is loaded so you can click through the full flow. Saved in this browser only.{" "}
         <a href="#" onClick={(e) => { e.preventDefault(); reset(); }}>Reset demo data</a>
       </div>
 
-      <div className="grid kpis">
-        <div className="card kpi"><div className="n">{clients.length}</div><div className="l">Active clients</div></div>
-        <div className="card kpi"><div className="n">{received}/{expected}</div><div className="l">Documents received this month</div></div>
-        <div className="card kpi"><div className="n">{incomplete}</div><div className="l">Clients still owing documents</div></div>
-        <div className="card kpi"><div className="n">{pending}</div><div className="l">Bills waiting for your approval</div></div>
-      </div>
-
-      <div className="card" style={{ padding: 0 }}>
-        <table>
-          <thead>
-            <tr><th>Client</th><th>Documents this month</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody>
-            {clients.map((c) => {
-              const pct = Math.round((c.docsReceived / c.docsExpected) * 100);
-              const done = c.docsReceived >= c.docsExpected;
-              return (
-                <tr key={c.id}>
-                  <td><strong>{c.name}</strong></td>
-                  <td>
-                    <div className={`bar ${done ? "done" : ""}`}><span style={{ width: `${Math.min(100, pct)}%` }} /></div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{c.docsReceived} of {c.docsExpected}</div>
-                  </td>
-                  <td>
-                    {done ? <span className="tag ok">Complete</span> : <span className="tag warn">{c.docsExpected - c.docsReceived} missing</span>}
-                    {c.lastReminder && (
-                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                        Chased {new Date(c.lastReminder).toLocaleDateString("en-MY")}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    {!done && <button className="btn" onClick={() => chase(c.id)}>Chase on WhatsApp</button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <BoardTable rows={rows} onChase={chase} />
+      <p className="bill-meta" style={{ marginTop: 10 }}>
+        A statement is due by the 5th of the following month. A missing statement is Blocked only after the client has been chased and that date has passed. Until then it is Waiting.
+      </p>
     </main>
   );
 }

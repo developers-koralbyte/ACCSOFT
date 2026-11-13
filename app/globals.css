@@ -203,3 +203,29 @@ a.tag:hover { text-decoration: none; filter: brightness(0.96); }
 .staff-switch { display: inline-flex; align-items: center; gap: 6px; color: #cbd8e8; font-size: 13px; }
 .staff-switch select { width: auto; padding: 4px 8px; font-size: 13px; }
 .msg { background: #f1f5f9; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; font-family: inherit; font-size: 14px; margin: 0; }
+
+/* ---------- month board ---------- */
+table.board th { white-space: nowrap; }
+table.board td { padding: 10px 10px; min-width: 150px; }
+.cell { display: block; border-radius: 10px; padding: 8px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 13px; line-height: 1.35; }
+.cell:hover { text-decoration: none; filter: brightness(0.97); }
+.cell .cell-state { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.cell.done { background: var(--ok-soft); border-color: #86efac; }
+.cell.done .cell-state { color: var(--ok); }
+.cell.progress { background: var(--warn-soft); border-color: #fcd34d; }
+.cell.progress .cell-state { color: var(--warn); }
+.cell.progress.idle { background: #f1f5f9; border-color: var(--line); }
+.cell.progress.idle .cell-state { color: var(--muted); }
+.cell.blocked { background: #fee2e2; border-color: #fca5a5; }
+.cell.blocked .cell-state { color: var(--bad); }
+button.chase { margin-top: 6px; padding: 3px 10px; font-size: 12px; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.check:last-child { border-bottom: none; }
+.check .mark { font-weight: 700; width: 22px; }
+.check .mark.ok { color: var(--ok); }
+.check .mark.no { color: var(--bad); }
+.steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+.step { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; }
+.step.done { border-color: #86efac; background: #f0fdf4; }
+.blockers { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--bad); }

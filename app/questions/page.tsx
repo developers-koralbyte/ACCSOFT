@@ -9,9 +9,11 @@ import { fmtDate, fmtRM, monthName, monthOf } from "@/lib/money";
 import { taxOptionsFor } from "@/lib/tax";
 import { ALL_CATEGORIES } from "@/lib/match/categories";
 import { reconcileClient } from "@/lib/match/engine";
+import { reconcileForClient } from "@/lib/month/snapshot";
+import { chaseClient } from "../chase-action";
 import { answerWithDocument } from "@/lib/match/actions";
 import { buildQuestions, openQuestions, type QuestionView } from "@/lib/chase/questions";
-import { missingDocuments } from "@/lib/chase/missing";
+import { chaseKinds, missingDocuments } from "@/lib/chase/missing";
 import { buildMissingMessage, buildQuestionMessage, isDraft, kindLabel, LANGS, PACKS, questionSentence } from "@/lib/chase/templates";
 import { sendWhatsApp } from "@/lib/chase/send";
 import { getMonth, isMonthLocked, updateMonth } from "@/lib/month/records";
@@ -42,10 +44,7 @@ export default function QuestionsPage() {
   const statements = useMemo(() => (state?.statements ?? []).filter((s) => s.clientId === clientId), [state, clientId]);
   const monthStatements = useMemo(() => statements.filter((s) => monthOf(s.periodEnd) === month), [statements, month]);
   const bills = useMemo(() => (state?.bills ?? []).filter((b) => b.clientId === clientId), [state, clientId]);
-  const recon = useMemo(
-    () => reconcileClient({ statements, bills, decisions: state?.decisions ?? {}, memory: state?.memory?.[clientId] ?? {}, modelSuggestions: state?.modelSuggestions ?? [] }),
-    [statements, bills, state, clientId],
-  );
+  const recon = useMemo(() => (state ? reconcileForClient(state, clientId) : reconcileClient({ statements: [], bills: [], decisions: {}, memory: {} })), [state, clientId]);
   const questions = useMemo(() => buildQuestions({ statements: monthStatements, recon, sent: state?.questions ?? {} }), [monthStatements, recon, state]);
 
   const act: Act = (kind, text, fn, m) => update((s) => addActivity(fn(s), { clientId, month: m ?? month, by: staff.name, kind, text }));
@@ -68,7 +67,7 @@ export default function QuestionsPage() {
   const included = open.filter((q) => !exclude.has(q.key));
   const message = buildQuestionMessage(lang, client.name, month, included.map((q) => ({ date: q.date, amount: q.amount, side: q.side, payee: q.payee })));
   const missing = missingDocuments(state, clientId, month);
-  const missingMessage = buildMissingMessage(lang, client.name, month, missing.map((m) => m.kind));
+  const missingMessage = buildMissingMessage(lang, client.name, month, chaseKinds(state, clientId, month));
   const freeBills = bills.filter((b) => !recon.consumed.has(b.id));
   const months = Array.from(new Set([DEMO_MONTH, month, ...statements.map((s) => monthOf(s.periodEnd))])).sort().reverse();
   const draftOf = (q: QuestionView) => answers[q.key] ?? { text: "", doc: "", category: q.result.category, tax: q.result.taxCode };
@@ -86,19 +85,7 @@ export default function QuestionsPage() {
   }
 
   function sendChase() {
-    if (!missing.length) return;
-    const res = sendWhatsApp(client!.phone, missingMessage);
-    const at = new Date().toISOString();
-    update((s) =>
-      addActivity(
-        {
-          ...s,
-          chases: { ...s.chases, [`${clientId}:${month}`]: { clientId, month, at, by: staff.name } },
-          clients: s.clients.map((c) => (c.id === clientId ? { ...c, lastReminder: at } : c)),
-        },
-        { clientId, month, by: staff.name, kind: "chase", text: `Chased ${missing.length} missing ${missing.length === 1 ? "document" : "documents"} (${missing.map((m) => m.kind).join(", ")}) on WhatsApp in ${PACKS[lang].label}` },
-      ),
-    );
+    const res = chaseClient(update, state!, clientId, month, staff.name);
     setMsg(res.ok ? "WhatsApp opened with the chase message ready. Press send there." : "Your browser blocked the WhatsApp window. Allow pop-ups, or copy the message below.");
   }
 
@@ -269,9 +256,9 @@ export default function QuestionsPage() {
         </>
       )}
 
-      <div className="section-head"><h2 style={{ fontSize: 18 }}>Missing documents for {monthName(month)}</h2></div>
+      <div className="section-head" id="missing"><h2 style={{ fontSize: 18 }}>Missing documents for {monthName(month)}</h2></div>
       <div className="card">
-        {missing.length === 0 ? (
+        {missing.length === 0 && !chaseKinds(state, clientId, month).length ? (
           <p style={{ margin: 0 }}>Nothing missing. Everything this client normally sends has arrived, or was marked not needed.</p>
         ) : (
           <>

@@ -2,54 +2,77 @@
 
 Working name: DocFlow. The promise: "Every client's month complete by the 5th, without chasing."
 
-This guide covers what is built so far (Phases 1 and 2), how to run it on the Vercel preview with no API key, what is real and what is simulated, and the open items that need your input. Later phases will be added here as they land.
+This guide covers what is built so far (Phases 1 to 4), how to run it on the Vercel preview with no API key, what is real and what is simulated, and the open items that need your input. Later phases will be added here as they land.
 
-## The demo path (about two minutes, no API key)
+## The demo path (no API key)
 
-1. Open **Bank statements**. Choose the client "Seri Murni Trading Sdn Bhd".
-2. Click **Bank A layout: September 2026 (clean)**. The statement shows **Proven to the cent**: opening balance plus money in, less money out, equals the closing balance, and every running balance agrees.
-3. Click **Bank A layout: October 2026 (follows September)**. It proves too, and a green continuity note says October opens at exactly September's closing balance. A year-end summary card appears (2 of 2 months proven, none missing, no breaks).
-4. Scroll to **Matching to documents** on October. Every line is in one of four states:
-   - **Matched (5):** three by invoice reference (rule 1), one by payee within 7 days (rule 2), one by a single candidate within 3 days (rule 3). Each line says which rule matched.
-   - **Suggested (1):** Bintang Stationery. Same payee and amount, but the document is 13 days from the payment, outside the rule windows. Click **Accept**. A prompt offers to apply the category to 1 other line (the September Bintang line) and remember it.
-   - **Bank only (7):** the service charge, payroll, the profit credit and four customer receipts. Each has a proposed category. Click **Confirm** on each. Nothing is confirmed for you.
-   - **Unexplained (2):** Ali Trading RM2,400.00 and the Harta Properti rent RM4,500.00. No document fits.
-5. The statement shows **Reconciled** only when nothing is Suggested or Unexplained and every bank only category is confirmed by a person. Until then it says, for example, "7 bank only lines to confirm".
-6. Click **Bank B layout: October 2026 (one line breaks the balance)** for Lotus Kitchen. It shows **Break at line 4**. Use **Jump to line 4**, then **Use RM3,125.00** to correct it inline. The proof re-runs and turns green.
+1. **Month board** (the home screen). Headline: "1 of 6 clients complete for October". Five stages across, one row per client. BlueRiver Logistics is complete, Kenanga Design and Harmoni Dental are in progress, Pixel Orchard is blocked (chased, still no statement, past the 5th). Seri Murni Trading and Lotus Kitchen are "Waiting for statement" with a **Chase** button.
+2. Open **Bank statements** for Seri Murni Trading. Click **September (clean)**: **Proven to the cent**. Click **October (follows September)**: it proves too, and continuity passes. A year-end summary card appears.
+3. **Matching** on October: Matched 5, Suggested 1, Bank only 7, Unexplained 2. Accept the Bintang suggestion: the line shows "Accepted by Aisyah Rahman on [date]" in blue, with where it came from. Confirm each bank only category. Nothing is confirmed for you.
+4. **Client questions**: the two Unexplained lines (Ali Trading and the rent) are already written as questions. Send them as one WhatsApp message. Record the answers as text (or link a document). Each line moves to **Answered**.
+5. **Month page** (click the Approved cell). The checklist shows what is done. Rent is outstanding, so approval needs a tick: "Approved with 1 document outstanding". Step 1: Aisyah marks it prepared. Switch to Daniel in the top bar (**Acting as**). Step 2: Daniel approves. The month locks and the snapshot is shown.
+6. Go back to the board: the cell is done. Try to edit one of the locked bills in the **Review queue**: the fields are locked, but posting to Xero still works. **Reopen** the month with a reason to unlock it.
+7. Bank B sample (Lotus Kitchen): **Break at line 4**. Jump to the line, use the suggested amount, and the proof turns green.
 
-To start over, use **Reset demo data** on the Clients page.
+To start over, use **Reset demo data** on the board.
 
-Real statements: choose **Choose PDF** on the same page with any digital bank statement PDF. It is read in the browser from the PDF's own text layer. Nothing is uploaded.
+Real statements: **Choose PDF** on Bank statements with any digital bank statement PDF. It is read in the browser from the PDF's own text layer. Nothing is uploaded.
+
+## How the month board decides
+
+Every stage is worked out from the data, never stored by hand.
+- **Received:** a statement for the month has arrived and no recurring document is missing. If the statement has not arrived the cell says **Waiting for statement** (in progress, with a Chase button). It becomes **Blocked** only when the client has been chased and the date is past the cutoff, the 5th of the following month. The cutoff is `MONTH_CUTOFF_DAY` in `lib/config.ts`.
+- **Proven:** all statements proven to the cent. Totals-only statements need their warning acknowledged. A break blocks.
+- **Matched:** no suggestions left and every bank only category confirmed by a person.
+- **Answered:** no unexplained lines left. Open questions show a count, with how many were sent.
+- **Approved:** Prepared by, then Reviewed by a different person.
+
+Approval needs: every statement proven (or totals-only with the warning acknowledged), every statement Reconciled, no open questions. Missing documents do not block approval, but the approver must tick an acknowledgement unless each is marked "Not needed this month".
+
+## Locking and the snapshot
+
+- On approval the month's results are stored: statement proof, every line's state, the match and rule, category, tax code, answers, and the documents used. The screens show that snapshot for a locked month, so it cannot change if a bill is edited or added later.
+- Statement edits, match decisions, answers, uploads and removals for that month are locked. Bills used in the month are locked too (supplier, date, amounts, category, tax code). Posting those bills to Xero is still allowed.
+- Reopening needs a reason, removes the lock and the snapshot, and is logged.
+- The activity log records every correction, acceptance, category confirmation, question sent, answer, chase, approval and reopening, with who and when.
 
 ## What is real and what is simulated
 
 Real:
-- PDF reading (pdfjs, in the browser, from the text layer with coordinates), including password protected PDFs. The password is used in memory for that one unlock and is never stored.
-- The balance proof, the line by line running balance check, inline correction, continuity checks, duplicate rejection, and the year-end summary.
-- Matching rules, the payee normaliser, payee memory, the date-aware tax table, and the reconciliation status.
-- Amounts are integer sen throughout the new code.
-- The sample statements are real PDFs in `public/samples`, generated by `scripts/make-sample-pdfs.mjs`, and go through the same upload path as your own files.
+- PDF reading (pdfjs, in the browser), password protected PDFs (password kept in memory only), the balance proof, continuity, year-end summary.
+- Matching rules, the payee normaliser, payee memory, the date-aware tax table, reconciliation, questions, the board, sign-off, snapshot and locking.
+- Amounts are integer sen in all new code.
+- The sample statements are real PDFs in `public/samples`, generated by `scripts/make-sample-pdfs.mjs`.
 
 Simulated or limited:
-- All sample clients, suppliers, people, account numbers and amounts are invented.
-- Storage is the browser's localStorage only. All reads and writes go through `lib/store.ts`, so a database can replace it later. There is no login.
-- Without `ANTHROPIC_API_KEY`: document extraction returns sample data, scanned statements are refused with a clear message, and model match suggestions are off.
-- With a key: scanned statement pages are read by the model (page images only, never pages that have a text layer), and a button asks the model about unexplained payments. The live calls could not be tested without a key. The code that checks the model's answers (exact sums in sen, known ids only) is tested.
-- Xero draft bill posting, WhatsApp import, the review queue and CSV export are as before. In demo mode nothing is posted anywhere.
-- "My business" mode starts with five clearly labelled sample documents. Use **Clear samples** to remove them.
+- All clients, suppliers, people, account numbers and amounts are invented. Aisyah Rahman and Daniel Lim are fictional staff.
+- Three October statements (BlueRiver, Kenanga, Harmoni) are seeded in code, not PDFs. Seri Murni, Lotus Kitchen and Pixel Orchard start without one: the first two on purpose, so you can upload their samples live, and Pixel Orchard to show a blocked client.
+- "What the client sent in earlier months" (used by the missing-documents chaser) is seeded history. A real build would read the document store.
+- WhatsApp: messages open a prefilled wa.me link. There is no WhatsApp Business API. All sending goes through one function, `sendWhatsApp` in `lib/chase/send.ts`.
+- Storage is the browser's localStorage only, behind `lib/store.ts`. No login.
+- Without `ANTHROPIC_API_KEY`: extraction returns sample data, scanned statements are refused with a clear message, and model match suggestions are off. With a key those paths are live. They could not be tested without a key. The code that validates the model's matches (exact sums in sen) is tested.
+- Xero draft posting, WhatsApp import, the review queue and CSV export work as before.
 
-The "Demo: sample data" badge in the top bar shows while the app runs on seeded data or demo extraction.
+The "Demo: sample data" badge shows in the top bar while the app runs on seeded data or demo extraction.
+
+## Draft translations that need a native speaker
+
+All client-facing wording is in one file: `lib/chase/templates.ts`. These are drafts and the screen shows a warning until `draft` is set to false:
+- **Bahasa Malaysia (ms):** the single question, the numbered question list, the closing line, the missing-documents message, the document names (Resit atau invois sewa, Bil utiliti, Bil telefon dan internet, Penyata bank), and the month names.
+- **Mandarin (zh, Simplified Chinese):** the same set (租金收据或发票, 水电费账单, 电话和网络账单, 银行对账单) and the month format (2026年10月). Say if you want Traditional Chinese instead.
 
 ## Privacy rules built in
 
-- Only the last 4 digits of an account number are shown or stored. File names that contain long numbers are masked before saving.
+- Only the last 4 digits of an account number are shown or stored. File names with long numbers are masked before saving.
 - Online banking logins are never requested or stored. A PDF password is the only credential, kept in memory.
 
 ## Open items that need your input
 
-1. **SST rates and effective dates.** The table in `lib/tax.ts` is best recollection, marked TODO. Please verify every rate and date, including which services are taxed at 6% versus 8% (for example telecommunications and logistics). The sample broadband and courier suppliers were changed to sell IT support and design services at 8%, as you asked. Bank charges are proposed at no tax, which also needs checking.
-2. **Import templates (Phase 5).** Xero statement CSV and QuickBooks layouts will use the layouts I know. SQL Account, AutoCount and Zoho Books need a real vendor template or sample import file from each. Until then they will ship as draft mapping presets.
-3. **Translations (Phase 3).** Bahasa Malaysia and Mandarin client messages will be drafts and need a native speaker.
-4. **More real statements.** The parser has been checked against one real digital statement layout (single signed amount column with a running balance). Other banks may need tuning. Send redacted samples to extend coverage.
-5. **Rent and similar payments with no document.** They show as Unexplained, by design. Phase 3 turns them into client questions.
-6. **Money-in lines.** Money-in lines that name an invoice are proposed as "Sales receipts" and always need a person to confirm. Say if you want a different treatment.
+1. **SST rates and effective dates** in `lib/tax.ts` (TODO, best recollection). Verify every rate and date, including which services are 6% versus 8%. Bank charges are proposed at no tax, which also needs checking.
+2. **Import templates (Phase 5).** Xero statement CSV and QuickBooks will use the layouts I know. SQL Account, AutoCount and Zoho Books need a real vendor template or sample import file each. Until then they ship as draft presets.
+3. **Translations:** the drafts listed above.
+4. **More real statements.** The parser has been checked against one real digital layout. Other banks may need tuning. Send redacted samples.
+5. **Recurring documents** (`RECURRING_CATEGORIES` in `lib/config.ts`): Rent, Utilities, Telephone and internet, plus Bank statement. A category counts when it appeared in 2 of the previous 3 months. Tell me if you want different categories or rules.
+6. **Chase then Blocked.** Chasing a waiting client after the cutoff turns the cell Blocked straight away, because the rule is "chased and past the 5th". Say if you want a grace period after a chase.
+7. **Money-in lines** that name an invoice are proposed as "Sales receipts" and always need a person to confirm.
+8. **Business mode** approves in one step ("Mark month done" by You).

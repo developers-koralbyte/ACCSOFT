@@ -55,3 +55,22 @@ export function bill(id: string, supplier: string, invoiceNo: string, date: stri
     ...extra,
   };
 }
+
+import type { AppState } from "@/lib/types";
+
+export function baseState(over: Partial<AppState> = {}): AppState {
+  return {
+    clients: [{ id: "c1", name: "Seri Murni Trading Sdn Bhd", phone: "60100000001", docsExpected: 1, docsReceived: 1 }],
+    bills: [],
+    statements: [],
+    decisions: {},
+    memory: {},
+    modelSuggestions: [],
+    questions: {},
+    history: [],
+    chases: {},
+    months: {},
+    activity: [],
+    ...over,
+  };
+}

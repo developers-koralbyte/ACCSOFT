@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { readMode, useDocflow } from "@/lib/store";
 import { clearSamples } from "@/lib/demo";
+import { boardRows } from "@/lib/board";
+import { DEMO_MONTH } from "@/lib/config";
+import { monthName } from "@/lib/money";
+import { BoardTable } from "../board-table";
 import { billsToCsv, downloadCsv } from "@/lib/csv";
 import { money } from "@/lib/malaysia";
 import { fmtDate } from "@/lib/money";
@@ -30,6 +34,7 @@ export default function BusinessPage() {
   const spend = filed.reduce((a, b) => a + b.total, 0);
   const sst = filed.reduce((a, b) => a + b.tax, 0);
   const hasSamples = state.bills.some((b) => b.sample);
+  const myRow = boardRows(state, DEMO_MONTH, new Date(), ["me"]);
 
   return (
     <main className="page">
@@ -50,6 +55,12 @@ export default function BusinessPage() {
           </>
         )}
       </div>
+
+      <div className="section-head" style={{ margin: "0 0 8px" }}>
+        <h2 style={{ fontSize: 18 }}>{monthName(DEMO_MONTH)}: where your month stands</h2>
+      </div>
+      <BoardTable rows={myRow} showName={false} />
+      <p className="bill-meta" style={{ margin: "8px 0 20px" }}>Add a bank statement and the stages fill in. <a href="/statements">Add a statement</a> | <a href="/month?client=me">Mark the month done</a></p>
 
       <div className="grid kpis">
         <div className="card kpi"><div className="n">{bills.length}</div><div className="l">Documents captured</div></div>

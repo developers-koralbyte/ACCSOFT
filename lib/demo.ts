@@ -1,5 +1,6 @@
 import type { AppState, Bill, Client } from "./types";
 import type { HistoryItem, Lang } from "./chase/types";
+import { seedMonthData } from "./seed-month";
 
 // Every name, number and amount in this file is invented sample data.
 
@@ -93,7 +94,7 @@ function emptyExtras() {
 }
 
 export function seedState(): AppState {
-  return { clients, bills, ...emptyExtras(), history };
+  return seedMonthData({ clients, bills, ...emptyExtras(), history });
 }
 
 // "My business" mode starts with a few clearly labelled sample documents so the screens are not empty.

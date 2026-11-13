@@ -47,3 +47,11 @@ export function missingDocuments(state: AppState, clientId: string, month: strin
   const got = receivedKinds(state, clientId, month);
   return recurringKinds(state, clientId, month).filter((i) => !got.has(i.kind) && !waived.includes(i.kind));
 }
+
+// What a chase message asks for. When the statement itself has not arrived it is always on the list.
+export function chaseKinds(state: AppState, clientId: string, month: string): string[] {
+  const kinds = missingDocuments(state, clientId, month).map((m) => m.kind);
+  const hasStatement = state.statements.some((s) => s.clientId === clientId && monthOf(s.periodEnd) === month);
+  if (!hasStatement && !kinds.includes(BANK_STATEMENT_KIND)) kinds.push(BANK_STATEMENT_KIND);
+  return kinds;
+}

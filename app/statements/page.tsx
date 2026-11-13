@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDocflow, useStaff } from "@/lib/store";
 import { addActivity } from "@/lib/activity";
 import { useQueryParam } from "@/lib/useQuery";
-import { isMonthLocked } from "@/lib/month/records";
+import { getMonth, isMonthLocked } from "@/lib/month/records";
 import type { Act } from "../answer-flow";
 import { fmtDate, fmtRM, monthName, monthOf, parseSen, senToPlain } from "@/lib/money";
 import { proveStatement, correctLine } from "@/lib/statements/proof";
@@ -15,6 +15,7 @@ import { duplicateMessage, toStatement } from "@/lib/statements/build";
 import type { ProofResult, Statement, StatementKind } from "@/lib/statements/types";
 import { yearEndSummaries } from "@/lib/statements/yearend";
 import { reconcileClient } from "@/lib/match/engine";
+import { reconcileForClient } from "@/lib/month/snapshot";
 import Matching from "./matching";
 import expected from "@/data/sample-expected.json";
 
@@ -78,17 +79,7 @@ export default function StatementsPage() {
   );
   const issues = useMemo(() => checkContinuity(mine), [mine]);
   const yearEnd = useMemo(() => yearEndSummaries(mine), [mine]);
-  const recon = useMemo(
-    () =>
-      reconcileClient({
-        statements: mine,
-        bills: (state?.bills ?? []).filter((b) => b.clientId === selected),
-        decisions: state?.decisions ?? {},
-        memory: state?.memory?.[selected] ?? {},
-        modelSuggestions: state?.modelSuggestions ?? [],
-      }),
-    [mine, state, selected],
-  );
+  const recon = useMemo(() => (state ? reconcileForClient(state, selected) : reconcileClient({ statements: [], bills: [], decisions: {}, memory: {} })), [state, selected]);
   // accounts with two or more statements and nothing wrong between them
   const goodAccounts = useMemo(() => {
     const groups = new Map<string, Statement[]>();
@@ -360,6 +351,8 @@ export default function StatementsPage() {
               live,
               by: staff.name,
               locked: isMonthLocked(state, s.clientId, monthOf(s.periodEnd)),
+              snapshot: getMonth(state, s.clientId, monthOf(s.periodEnd)).snapshot?.statements.find((x) => x.id === s.id),
+              snapBills: getMonth(state, s.clientId, monthOf(s.periodEnd)).snapshot?.bills,
               update,
               act,
             }}
