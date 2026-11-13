@@ -21,18 +21,33 @@ const STEPS = [
 export default function Landing() {
   return (
     <main>
-      <section className="hero">
-        <div className="wrap">
-          <h1>{HEADLINE}</h1>
-          <p className="lead">
-            {SITE.name} gives accounting firms a finished month, not just a document reader: documents collected, bank statements proven, every line explained, and a month you can sign off and hand over.
-          </p>
-          <div className="cta-row">
-            <Link className="btn big" href="/board">Open the demo</Link>
-            <StartGuidedDemoButton className="btn big secondary" />
-            <Link className="btn big secondary" href="/pricing">See pricing</Link>
+      <section className="p-hero">
+        <div className="p-wrap p-hero-grid">
+          <div className="p-hero-text">
+            <p className="p-eyebrow">For accounting firms</p>
+            <h1>{HEADLINE}</h1>
+            <p className="p-lead">
+              {SITE.name} gives your firm a finished month, not just a document reader: documents collected, bank statements proven to the cent, every line explained, and a month you can sign off and hand over.
+            </p>
+            <div className="p-cta">
+              <Link className="p-btn primary lg" href="/board">Open the demo</Link>
+              <StartGuidedDemoButton className="p-btn secondary lg" />
+              <Link className="p-btn ghost lg" href="/pricing">See pricing</Link>
+            </div>
+            <p className="p-fine"><span className="p-dot" aria-hidden="true" /> Demo: sample data. Everything you see in the demo is invented, runs in your browser, and nothing is uploaded.</p>
           </div>
-          <p className="fine">The demo runs on invented sample data, in your browser. Nothing is uploaded.</p>
+          <div className="p-shots">
+            <figure className="p-frame p-frame-main">
+              <div className="p-bar" aria-hidden="true"><i /><i /><i /></div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/screens/hero-board.jpg" alt="The month board: one row per client with five stages each" width="1280" height="640" />
+            </figure>
+            <figure className="p-frame p-frame-float">
+              <div className="p-bar" aria-hidden="true"><i /><i /><i /></div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/screens/hero-proof.jpg" alt="A bank statement shown as proven to the cent" width="1100" height="330" />
+            </figure>
+          </div>
         </div>
       </section>
 

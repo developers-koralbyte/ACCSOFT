@@ -63,14 +63,20 @@ export default function Nav() {
   // The public pages (landing and pricing) have their own simple header, with no app tabs and no demo badge.
   if (path === "/" || path === "/pricing") {
     return (
-      <header className="topbar public">
-        <Link href="/" className="brand">{SITE.name}</Link>
-        <nav className="nav">
-          <Link href="/#how" className={path === "/" ? "" : ""}>How it works</Link>
-          <Link href="/pricing" className={path === "/pricing" ? "active" : ""}>Pricing</Link>
-          <Link href="/#contact">Contact</Link>
-        </nav>
-        <Link className="open-demo" href="/board">Open the demo</Link>
+      <header className="pub-header">
+        <div className="p-wrap pub-header-in">
+          <Link href="/" className="pub-brand"><span className="pub-mark" aria-hidden="true" />{SITE.name}</Link>
+          <nav className="pub-nav" aria-label="Main">
+            <Link href="/#how">How it works</Link>
+            <Link href="/pricing" className={path === "/pricing" ? "on" : ""}>Pricing</Link>
+            <Link href="/#faq">FAQ</Link>
+            <Link href="/#walkthrough">Contact</Link>
+          </nav>
+          <div className="pub-header-cta">
+            <Link className="p-btn ghost hide-sm" href="/#walkthrough">Book a walkthrough</Link>
+            <Link className="p-btn primary" href="/board">Open the demo</Link>
+          </div>
+        </div>
       </header>
     );
   }
