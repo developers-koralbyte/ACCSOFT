@@ -5,7 +5,7 @@
 export const TRANSFER_WORDS: string[] = [
   "DUITNOW", "IBG", "IBFT", "JOMPAY", "FPX", "TRF", "TRANSFER", "PYMT", "PAYMENT", "PAY", "GIRO", "INSTANT",
   "ONLINE", "QR", "CT", "MBB", "TO", "FR", "FROM", "INTO", "A/C", "AC", "ACCOUNT", "INTER", "BANK", "BILLER",
-  "REF", "REFERENCE", "MERCHANT", "PURCHASE", "TXN", "TRANSACTION", "CASH", "BILL", "CHQ", "CHEQUE",
+  "REF", "REFERENCE", "INV", "INVOICE", "MERCHANT", "PURCHASE", "TXN", "TRANSACTION", "CASH", "BILL", "CHQ", "CHEQUE",
 ];
 
 // Company suffixes, so "Sinar Fuel Card Sdn Bhd" and "SINAR FUEL CARD" compare equal.

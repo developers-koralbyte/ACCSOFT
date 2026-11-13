@@ -33,6 +33,7 @@ export interface Statement {
   kind: StatementKind;
   addedAt: string;
   warnings: string[];
+  fileStored?: boolean; // the original PDF is held in this browser, for the audit pack
 }
 
 export type ProofStatus = "proven" | "break" | "totals-only" | "incomplete";

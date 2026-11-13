@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { readMode, useDocflow } from "@/lib/store";
+import { readMode, useDocflow, useStaff } from "@/lib/store";
+import { LEDGERS, type LedgerId } from "@/lib/export/ledgers";
+import { addActivity } from "@/lib/activity";
+import { monthName } from "@/lib/money";
 
 function reminderText(clientName: string, missing: number): string {
   return (
@@ -13,6 +16,7 @@ function reminderText(clientName: string, missing: number): string {
 
 export default function ClientsPage() {
   const { state, update, reset } = useDocflow();
+  const staff = useStaff();
 
   // SMEs using "My business" mode land on their own dashboard instead of the firm client list
   useEffect(() => {
@@ -60,7 +64,7 @@ export default function ClientsPage() {
       <div className="card" style={{ padding: 0 }}>
         <table>
           <thead>
-            <tr><th>Client</th><th>Documents this month</th><th>Status</th><th></th></tr>
+            <tr><th>Client</th><th>Documents this month</th><th>Status</th><th>Ledger</th><th>Year end</th><th></th></tr>
           </thead>
           <tbody>
             {clients.map((c) => {
@@ -80,6 +84,16 @@ export default function ClientsPage() {
                         Chased {new Date(c.lastReminder).toLocaleDateString("en-MY")}
                       </div>
                     )}
+                  </td>
+                  <td style={{ minWidth: 150 }}>
+                    <select aria-label={`Ledger for ${c.name}`} value={c.ledger ?? "xero"} onChange={(e) => update((s) => addActivity({ ...s, clients: s.clients.map((x) => (x.id === c.id ? { ...x, ledger: e.target.value as LedgerId } : x)) }, { clientId: c.id, by: staff.name, kind: "ledger", text: `Set the ledger to ${LEDGERS.find((l) => l.id === e.target.value)?.label}` }))}>
+                      {LEDGERS.map((l) => <option key={l.id} value={l.id}>{l.label}{l.draft ? " (draft template)" : ""}</option>)}
+                    </select>
+                  </td>
+                  <td style={{ minWidth: 120 }}>
+                    <select aria-label={`Financial year end for ${c.name}`} value={c.fyEndMonth ?? 12} onChange={(e) => update((s) => ({ ...s, clients: s.clients.map((x) => (x.id === c.id ? { ...x, fyEndMonth: Number(e.target.value) } : x)) }))}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{monthName(`2026-${String(m).padStart(2, "0")}`).split(" ")[0]}</option>)}
+                    </select>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     {!done && <button className="btn" onClick={() => chase(c.id)}>Chase on WhatsApp</button>}

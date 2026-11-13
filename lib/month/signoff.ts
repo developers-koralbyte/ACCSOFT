@@ -163,3 +163,16 @@ export function acknowledgeTotalsOnly(state: AppState, clientId: string, month: 
   const next = updateMonth(state, clientId, month, (m) => ({ ...m, ackTotalsOnly: Array.from(new Set([...m.ackTotalsOnly, statementId])) }));
   return addActivity(next, { clientId, month, by: by.name, kind: "acknowledged", text: `Acknowledged that ${s?.fileName ?? "a statement"} is proven on totals only: single lines were not proven`, at });
 }
+
+// Optional balance per books, typed in from the accountant's ledger. Blank (null) removes it. Not allowed once approved.
+export function setBooksBalance(state: AppState, clientId: string, month: string, statementId: string, sen: number | null, by: Staff, at = new Date().toISOString()): AppState {
+  if (getMonth(state, clientId, month).snapshot) return state;
+  const s = state.statements.find((x) => x.id === statementId);
+  const next = updateMonth(state, clientId, month, (m) => {
+    const books = { ...(m.booksBalance ?? {}) };
+    if (sen === null) delete books[statementId];
+    else books[statementId] = sen;
+    return { ...m, booksBalance: books };
+  });
+  return addActivity(next, { clientId, month, by: by.name, kind: "books-balance", text: sen === null ? `Cleared the balance per books for ${s?.fileName ?? "a statement"}` : `Entered the balance per books for ${s?.fileName ?? "a statement"}`, at });
+}

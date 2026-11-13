@@ -8,7 +8,8 @@ import { DEMO_MONTH } from "@/lib/config";
 import { fmtDateTime, monthName } from "@/lib/money";
 import { kindLabel } from "@/lib/chase/templates";
 import { getMonth, updateMonth } from "@/lib/month/records";
-import { acknowledgeTotalsOnly, approvalBlockers, approvalStatus, approveMonth, prepareMonth, readiness, reopenMonth } from "@/lib/month/signoff";
+import { acknowledgeTotalsOnly, approvalBlockers, approvalStatus, approveMonth, prepareMonth, readiness, reopenMonth, setBooksBalance } from "@/lib/month/signoff";
+import { fmtRM, parseSen, senToPlain } from "@/lib/money";
 import { STAFF } from "@/lib/staff";
 import type { AppState } from "@/lib/types";
 import { SnapshotView } from "../snapshot-view";
@@ -22,6 +23,7 @@ export default function MonthPage() {
   const [ack, setAck] = useState(false);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState("");
+  const [books, setBooks] = useState<Record<string, string>>({});
 
   const single = mode === "business";
   const clientId = state ? (single ? "me" : qClient || state.clients[0]?.id || "") : "";
@@ -138,6 +140,34 @@ export default function MonthPage() {
               </div>
             </div>
           </div>
+
+          {ready.statements.length > 0 && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <strong>Balance per books (optional)</strong>
+              <div className="bill-meta" style={{ margin: "2px 0 10px" }}>
+                Type in the balance from your ledger if you want a bank reconciliation. If you leave it blank, the audit pack contains a Bank statement review summary instead, with no books section.
+              </div>
+              {ready.statements.map((st) => {
+                const saved = rec.booksBalance?.[st.id];
+                const draft = books[st.id] ?? (saved === undefined ? "" : senToPlain(saved));
+                return (
+                  <div className="row" key={st.id} style={{ marginBottom: 8 }}>
+                    <div style={{ minWidth: 220 }}>
+                      <label>{st.bank} ending {st.accountLast4}: balance per bank {st.closing === null ? "n/a" : fmtRM(st.closing)}</label>
+                      <input inputMode="decimal" placeholder="For example 48800.00" value={draft} onChange={(e) => setBooks({ ...books, [st.id]: e.target.value })} />
+                    </div>
+                    <button className="btn secondary" onClick={() => {
+                      const raw = (books[st.id] ?? draft).trim();
+                      const sen = raw === "" ? null : parseSen(raw);
+                      if (raw !== "" && sen === null) return setMsg("Enter the balance like 48800.00");
+                      setMsg("");
+                      update((s) => setBooksBalance(s, clientId, month, st.id, sen, staff));
+                    }}>{draft.trim() === "" ? "Clear" : "Save"}</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="section-head" style={{ margin: "0 0 8px" }}><h2 style={{ fontSize: 18 }}>Sign-off</h2></div>
           <div className="steps" style={{ marginBottom: 20 }}>

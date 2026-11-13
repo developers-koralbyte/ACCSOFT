@@ -9,6 +9,7 @@ import { ingestPdf } from "@/lib/statements/ingest";
 import { loadBrowserPdfjs, PdfPasswordError } from "@/lib/statements/pdf";
 import { duplicateMessage, toStatement } from "@/lib/statements/build";
 import { proveStatement } from "@/lib/statements/proof";
+import { saveFile } from "@/lib/files";
 import type { Bill } from "@/lib/types";
 
 const MAX_FILES = 40;
@@ -121,7 +122,9 @@ export default function ImportPage() {
             } else {
               addedStatements.push(stmt);
               update((s) => ({ ...s, statements: [...s.statements, stmt] }));
-              setLog((l) => [...l, { text: `${f.name}: bank statement, ${proveStatement(stmt).label}. See Bank statements.`, ok: true }]);
+              const saved = await saveFile(stmt.id, f.name, f.data);
+              if (saved.ok) update((s) => ({ ...s, statements: s.statements.map((x) => (x.id === stmt.id ? { ...x, fileStored: true } : x)) }));
+              setLog((l) => [...l, { text: `${f.name}: bank statement, ${proveStatement(stmt).label}. See Bank statements.${saved.ok ? "" : ` ${saved.reason}`}`, ok: true }]);
             }
             done++;
             continue;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppState } from "./types";
 import { seedBusinessState, seedState } from "./demo";
 import { SELF, STAFF, staffById, type Staff } from "./staff";
+import { clearAllFiles } from "./files";
 
 export type Mode = "firm" | "business";
 
@@ -108,6 +109,7 @@ export function useDocflow() {
   }, []);
 
   const reset = useCallback(() => {
+    void clearAllFiles(); // stored statement PDFs go with the demo data
     const fresh = seed(modeRef.current);
     try {
       window.localStorage.setItem(KEYS[modeRef.current], JSON.stringify(fresh));
@@ -152,4 +154,16 @@ export function useStaff(): Staff {
     return () => window.removeEventListener(DATA_EVENT, read);
   }, []);
   return staff;
+}
+
+// Restores the seeded data for a mode, wipes stored statement files and the guided demo progress. Used by the top bar.
+export async function resetDemoData(mode: Mode): Promise<void> {
+  await clearAllFiles();
+  try {
+    window.localStorage.setItem(KEYS[mode], JSON.stringify(seed(mode)));
+    window.localStorage.removeItem("docflow-guide");
+  } catch {
+    /* ignore */
+  }
+  announce();
 }

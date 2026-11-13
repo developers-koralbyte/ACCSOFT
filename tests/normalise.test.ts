@@ -8,7 +8,7 @@ describe("payee normaliser", () => {
     expect(normalisePayee("IBFT TRANSFER BINTANG STATIONERY").text).toBe("BINTANG STATIONERY");
     expect(normalisePayee("JOMPAY KILAT BROADBAND REF 8810045512").text).toBe("KILAT BROADBAND");
     expect(normalisePayee("FPX PAYMENT PYMT TRF MERCHANT 5519").text).toBe("");
-    expect(normalisePayee("INTER-BANK PAYMENT INTO A/C PELANGGAN RUNCIT MAJU SDN BHD INV SM-2210-003").text).toBe("PELANGGAN RUNCIT MAJU INV");
+    expect(normalisePayee("INTER-BANK PAYMENT INTO A/C PELANGGAN RUNCIT MAJU SDN BHD INV SM-2210-003").text).toBe("PELANGGAN RUNCIT MAJU");
   });
   it("removes reference codes, months, extra spaces and case", () => {
     expect(normalisePayee("  transfer   to a/c  Harta   Properti Rental  RENT OCT 2026 ").text).toBe("HARTA PROPERTI RENTAL RENT");

@@ -6,12 +6,12 @@ import { seedMonthData } from "./seed-month";
 
 const lang = (l: Lang) => l;
 const clients: Client[] = [
-  { id: "c1", name: "Seri Murni Trading Sdn Bhd", phone: "60100000001", docsExpected: 42, docsReceived: 31, language: lang("en") },
-  { id: "c2", name: "Lotus Kitchen Enterprise", phone: "60100000002", docsExpected: 28, docsReceived: 28, language: lang("ms") },
-  { id: "c3", name: "BlueRiver Logistics Sdn Bhd", phone: "60100000003", docsExpected: 55, docsReceived: 22, language: lang("en") },
-  { id: "c4", name: "Kenanga Design Studio", phone: "60100000004", docsExpected: 18, docsReceived: 12, language: lang("en") },
-  { id: "c5", name: "Harmoni Dental Clinic", phone: "60100000005", docsExpected: 34, docsReceived: 34, language: lang("zh") },
-  { id: "c6", name: "Pixel Orchard Sdn Bhd", phone: "60100000006", docsExpected: 25, docsReceived: 9, language: lang("ms") },
+  { id: "c1", ledger: "xero", name: "Seri Murni Trading Sdn Bhd", phone: "60100000001", docsExpected: 42, docsReceived: 31, language: lang("en") },
+  { id: "c2", ledger: "quickbooks", name: "Lotus Kitchen Enterprise", phone: "60100000002", docsExpected: 28, docsReceived: 28, language: lang("ms") },
+  { id: "c3", ledger: "xero", fyEndMonth: 6, name: "BlueRiver Logistics Sdn Bhd", phone: "60100000003", docsExpected: 55, docsReceived: 22, language: lang("en") },
+  { id: "c4", ledger: "zoho", name: "Kenanga Design Studio", phone: "60100000004", docsExpected: 18, docsReceived: 12, language: lang("en") },
+  { id: "c5", ledger: "autocount", name: "Harmoni Dental Clinic", phone: "60100000005", docsExpected: 34, docsReceived: 34, language: lang("zh") },
+  { id: "c6", ledger: "sqlaccount", name: "Pixel Orchard Sdn Bhd", phone: "60100000006", docsExpected: 25, docsReceived: 9, language: lang("ms") },
 ];
 
 // What each client sent in earlier months, so the missing-documents chaser has something to compare against.
@@ -100,7 +100,7 @@ export function seedState(): AppState {
 // "My business" mode starts with a few clearly labelled sample documents so the screens are not empty.
 // Everything here is invented. The Clear samples button removes exactly these.
 export function seedBusinessState(): AppState {
-  const mine: Client = { id: "me", name: "My business", phone: "", docsExpected: 0, docsReceived: 5 };
+  const mine: Client = { id: "me", ledger: "other", name: "My business", phone: "", docsExpected: 0, docsReceived: 5 };
   const s = (b: Bill, sentBy: string, status: Bill["status"] = "pending"): Bill => ({ ...b, sample: true, sentBy, status });
   const list: Bill[] = [
     s(mk("m1", "me", "Mesra Fuel Kiosk", "MFK-9921307", "2026-11-02", 120.0, 0, "Fuel for delivery van", "whatsapp", 0.93, "Motor vehicle and fuel", "NONE"), "Ahmad (driver)"),

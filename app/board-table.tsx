@@ -31,7 +31,7 @@ export function BoardTable({ rows, onChase, showName = true }: { rows: BoardRow[
                       <span className="cell-text">{c.text}</span>
                     </a>
                     {c.canChase && onChase && (
-                      <button className="btn secondary chase" onClick={() => onChase(r.clientId)}>Chase</button>
+                      <button className="btn secondary chase" onClick={() => onChase(r.clientId)}>{c.chased ? "Chase again" : "Chase"}</button>
                     )}
                   </td>
                 );

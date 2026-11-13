@@ -3,6 +3,7 @@ import type { LineDecision, ModelSuggestion, PayeeMemory } from "./match/types";
 import type { ActivityEntry } from "./activity";
 import type { ChaseRecord, HistoryItem, Lang, QuestionRecord } from "./chase/types";
 import type { MonthRecord } from "./month/types";
+import type { LedgerId } from "./export/ledgers";
 
 export type Source = "whatsapp" | "upload" | "email";
 export type BillStatus = "pending" | "approved" | "posted";
@@ -15,6 +16,8 @@ export interface Client {
   docsReceived: number;
   lastReminder?: string;
   language?: Lang; // language for WhatsApp messages, English when not set
+  ledger?: LedgerId; // the accounting software this client uses, for exports
+  fyEndMonth?: number; // financial year end month, 1 to 12, December when not set
 }
 
 export interface Bill {

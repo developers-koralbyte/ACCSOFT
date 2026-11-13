@@ -1,4 +1,4 @@
-import { BANK_STATEMENT_KIND, MONTH_CUTOFF_DAY } from "./config";
+import { BANK_STATEMENT_KIND, CHASE_GRACE_DAYS, MONTH_CUTOFF_DAY } from "./config";
 import { missingDocuments } from "./chase/missing";
 import { monthName, monthOf, nextMonth } from "./money";
 import { proveStatement } from "./statements/proof";
@@ -28,6 +28,7 @@ export interface Cell {
   href: string;
   reason?: BlockReason;
   canChase?: boolean; // Received while waiting for a statement
+  chased?: boolean; // the client has already been chased for this month
 }
 
 export interface BoardRow {
@@ -48,6 +49,19 @@ export function pastCutoff(month: string, now: Date): boolean {
   return now.toISOString().slice(0, 10) > cutoffDate(month);
 }
 
+// The last day of the grace period after a chase. Blocked can only start the day after it.
+export function graceEnds(chasedAtIso: string): string {
+  const d = new Date(`${chasedAtIso.slice(0, 10)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + CHASE_GRACE_DAYS);
+  return d.toISOString().slice(0, 10);
+}
+
+export function pastGrace(chasedAtIso: string, now: Date): boolean {
+  return now.toISOString().slice(0, 10) > graceEnds(chasedAtIso);
+}
+
+const ddmmyyyy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export function boardRow(state: AppState, clientId: string, month: string, now: Date): BoardRow {
@@ -65,10 +79,12 @@ export function boardRow(state: AppState, clientId: string, month: string, now: 
   let received: Cell;
   if (!hasStatement) {
     const chased = state.chases[`${clientId}:${month}`];
-    if (chased && pastCutoff(month, now)) {
-      received = { status: "blocked", text: `Statement missing after chase (${chased.at.slice(8, 10)}/${chased.at.slice(5, 7)}/${chased.at.slice(0, 4)}), past the ${MONTH_CUTOFF_DAY}th`, count: 1, href: `/questions?${q}#missing`, reason: "statement-missing" };
+    if (chased && pastCutoff(month, now) && pastGrace(chased.at, now)) {
+      received = { status: "blocked", text: `Statement missing. Chased on ${ddmmyyyy(chased.at)}, grace period over, past the ${MONTH_CUTOFF_DAY}th`, count: 1, href: `/questions?${q}#missing`, reason: "statement-missing", chased: true };
+    } else if (chased) {
+      received = { status: "progress", text: `Chased on ${ddmmyyyy(chased.at)}, waiting`, count: Math.max(1, missingDocs.length), href: `/questions?${q}#missing`, canChase: true, chased: true };
     } else {
-      received = { status: "progress", text: chased ? "Waiting for statement, chased" : "Waiting for statement", count: Math.max(1, missingDocs.length), href: `/questions?${q}#missing`, canChase: true };
+      received = { status: "progress", text: "Waiting for statement", count: Math.max(1, missingDocs.length), href: `/questions?${q}#missing`, canChase: true };
     }
   } else if (missingDocs.length > 0) {
     received = { status: "progress", text: `${plural(missingDocs.length, "document", "documents")} missing`, count: missingDocs.length, href: `/questions?${q}#missing` };

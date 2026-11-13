@@ -47,6 +47,7 @@ export interface SnapStatement {
   totalDebit: number;
   totalCredit: number;
   totalsOnlyAcknowledged: boolean;
+  booksBalance: number | null; // balance per books, typed in by the accountant, sen. Null when not given
   counts: Record<LineState, number>;
   reconciled: boolean;
   lines: SnapLine[];
@@ -85,6 +86,7 @@ export interface MonthRecord {
   month: string;
   waived: string[]; // document kinds marked "Not needed this month"
   ackTotalsOnly: string[]; // statement ids whose "totals only" warning was acknowledged
+  booksBalance?: Record<string, number>; // optional balance per books per statement id, typed in from the ledger (sen)
   prepared?: Signoff;
   reviewed?: Signoff;
   outstandingAcknowledged?: number; // documents outstanding when the approver ticked the acknowledgement

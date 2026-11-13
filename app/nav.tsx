@@ -70,6 +70,8 @@ export default function Nav() {
         {link("/inbox", "Review queue")}
         {link("/statements", "Bank statements")}
         {link("/questions", "Client questions")}
+        {mode === "firm" && link("/export", "Exports")}
+        {mode === "firm" && link("/year-end", "Year-end")}
         {link("/upload", "Add documents")}
         {link("/import", "Import WhatsApp chat")}
       </nav>

@@ -5,6 +5,7 @@ import { useDocflow, useStaff } from "@/lib/store";
 import { addActivity } from "@/lib/activity";
 import { useQueryParam } from "@/lib/useQuery";
 import { getMonth, isMonthLocked } from "@/lib/month/records";
+import { removeFile, saveFile } from "@/lib/files";
 import type { Act } from "../answer-flow";
 import { fmtDate, fmtRM, monthName, monthOf, parseSen, senToPlain } from "@/lib/money";
 import { proveStatement, correctLine } from "@/lib/statements/proof";
@@ -18,6 +19,8 @@ import { reconcileClient } from "@/lib/match/engine";
 import { reconcileForClient } from "@/lib/month/snapshot";
 import Matching from "./matching";
 import expected from "@/data/sample-expected.json";
+
+const MAX_BATCH = 12;
 
 const GUARANTEE =
   "If DocFlow cannot tie a statement to the cent or point to the exact line that breaks, that client's month is free.";
@@ -150,6 +153,12 @@ export default function StatementsPage() {
       );
       setOpen((o) => new Set(o).add(stmt.id));
       if (item.clientId !== selected) setClientId(item.clientId);
+      if (item.kind !== "sample") {
+        // keep the original PDF in this browser so the audit pack can include it
+        const saved = await saveFile(stmt.id, item.name, item.data);
+        if (saved.ok) update((st) => ({ ...st, statements: st.statements.map((x) => (x.id === stmt.id ? { ...x, fileStored: true } : x)) }));
+        else say(saved.reason, "info");
+      }
       const p = proveStatement(stmt);
       say(
         `${item.name}: read ${stmt.lines.length} lines for ${clientName(item.clientId)}. ${p.label}.`,
@@ -171,7 +180,9 @@ export default function StatementsPage() {
   async function onFiles(files: FileList | null) {
     if (!files) return;
     setMsgs([]);
-    for (const f of Array.from(files)) {
+    const list = Array.from(files);
+    if (list.length > MAX_BATCH) say(`Up to ${MAX_BATCH} statements are read at a time (twelve months). The first ${MAX_BATCH} were read. Upload the rest in a second batch.`, "info");
+    for (const f of list.slice(0, MAX_BATCH)) {
       if (!/\.pdf$/i.test(f.name)) {
         say(`${f.name} is not a PDF. Bank statements are read from PDF files.`, "error");
         continue;
@@ -202,6 +213,13 @@ export default function StatementsPage() {
     setPending(null);
     setPassword(""); // the password is used once, in memory, and is never saved
     await ingest(p, pw);
+  }
+
+  async function dropFile(st: Statement) {
+    await removeFile(st.id);
+    update((s) =>
+      addActivity({ ...s, statements: s.statements.map((x) => (x.id === st.id ? { ...x, fileStored: false } : x)) }, { clientId: st.clientId, month: monthOf(st.periodEnd), by: staff.name, kind: "file-removed", text: `Removed the stored PDF of ${st.fileName}. The parsed figures were kept` }),
+    );
   }
 
   function patchStatement(id: string, fn: (s: Statement) => Statement, log?: string) {
@@ -244,6 +262,9 @@ export default function StatementsPage() {
         <p style={{ fontSize: 13, margin: "14px 0 0" }}>
           Digital statements are read on your device, so there is no upload size limit and nothing is sent to a server. If a PDF is
           password protected you will be asked for the password. It is used in this browser tab only and is never saved. Never share online banking logins: DocFlow does not need them.
+        </p>
+        <p style={{ fontSize: 13, margin: "8px 0 0" }}>
+          The PDF files are kept in this browser only, so they can go in the audit pack. Each statement has a Remove file button, and the figures stay.
         </p>
       </div>
 
@@ -329,7 +350,9 @@ export default function StatementsPage() {
             toggle={() => setOpen((o) => { const n = new Set(o); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })}
             patch={(fn, log) => patchStatement(s.id, fn, log)}
             locked={isMonthLocked(state, s.clientId, monthOf(s.periodEnd))}
-            remove={() =>
+            dropFile={() => dropFile(s)}
+            remove={() => {
+              void removeFile(s.id);
               update((st) =>
                 addActivity(
                   {
@@ -339,8 +362,8 @@ export default function StatementsPage() {
                   },
                   { clientId: s.clientId, month: monthOf(s.periodEnd), by: staff.name, kind: "statement-removed", text: `Removed statement ${s.fileName}` },
                 ),
-              )
-            }
+              );
+            }}
             matching={{
               clientId: selected,
               month: monthOf(s.periodEnd),
@@ -370,6 +393,7 @@ function StatementCard({
   toggle,
   patch,
   remove,
+  dropFile,
   locked,
   matching,
 }: {
@@ -378,6 +402,7 @@ function StatementCard({
   toggle: () => void;
   patch: (fn: (s: Statement) => Statement, log?: string) => void;
   remove: () => void;
+  dropFile: () => void;
   locked: boolean;
   matching: Omit<React.ComponentProps<typeof Matching>, "stmt">;
 }) {
@@ -427,6 +452,7 @@ function StatementCard({
             {stmt.bank} <span className="bill-meta">account ending {stmt.accountLast4}</span>
             {stmt.layout && <span className="tag" style={{ marginLeft: 8 }}>{stmt.layout}</span>}
             {stmt.kind === "sample" && <span className="tag" style={{ marginLeft: 8 }}>Sample</span>}
+            {stmt.fileStored && <span className="tag" style={{ marginLeft: 8 }} title="The original PDF is kept in this browser only">PDF kept in this browser</span>}
           </h3>
           <div className="bill-meta">
             {fmtDate(stmt.periodStart)} to {fmtDate(stmt.periodEnd)} | {stmt.lines.length} lines | {stmt.fileName}
@@ -558,7 +584,10 @@ function StatementCard({
 
           <div className="actions" style={{ marginTop: 12, justifyContent: "space-between" }}>
             <span className="bill-meta">{locked ? "This month is approved and locked. Reopen it to change this statement." : "The proof re-runs after every correction."}</span>
-            <button className="btn secondary" disabled={locked} title={locked ? "Approved and locked" : undefined} onClick={() => { if (confirm("Remove this statement from the demo?")) remove(); }}>Remove statement</button>
+            <span>
+              {stmt.fileStored && <button className="btn secondary" style={{ marginRight: 8 }} onClick={() => { if (confirm("Remove the stored PDF? The figures and proof stay.")) dropFile(); }}>Remove file</button>}
+              <button className="btn secondary" disabled={locked} title={locked ? "Approved and locked" : undefined} onClick={() => { if (confirm("Remove this statement from the demo?")) remove(); }}>Remove statement</button>
+            </span>
           </div>
         </div>
       )}

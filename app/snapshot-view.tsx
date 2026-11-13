@@ -68,7 +68,7 @@ export function SnapshotView({ snapshot }: { snapshot: MonthSnapshot }) {
       {snapshot.statements.map((s) => (
         <div key={s.id} className="card" style={{ marginBottom: 14 }}>
           <strong>{s.bank} account ending {s.accountLast4}</strong>
-          <div className="bill-meta">{fmtDate(s.periodStart)} to {fmtDate(s.periodEnd)} | {s.fileName} | opening {s.opening === null ? "n/a" : fmtRM(s.opening)}, closing {s.closing === null ? "n/a" : fmtRM(s.closing)}</div>
+          <div className="bill-meta">{fmtDate(s.periodStart)} to {fmtDate(s.periodEnd)} | {s.fileName} | opening {s.opening === null ? "n/a" : fmtRM(s.opening)}, closing {s.closing === null ? "n/a" : fmtRM(s.closing)}{s.booksBalance !== null && s.closing !== null ? `, balance per books ${fmtRM(s.booksBalance)}, difference ${fmtRM(s.closing - s.booksBalance)}` : ""}</div>
           <SnapshotStatementView snap={s} bills={snapshot.bills} />
         </div>
       ))}

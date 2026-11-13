@@ -17,7 +17,10 @@ export type ActivityKind =
   | "acknowledged"
   | "prepared"
   | "approval"
-  | "reopened";
+  | "reopened"
+  | "books-balance"
+  | "file-removed"
+  | "ledger";
 
 export interface ActivityEntry {
   id: string;

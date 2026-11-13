@@ -55,6 +55,32 @@ Simulated or limited:
 
 The "Demo: sample data" badge shows in the top bar while the app runs on seeded data or demo extraction.
 
+## Exports, audit pack and year-end (Phase 5)
+
+Exports and the audit pack exist only for **approved** months and are built from the approval snapshot. Each client has a **Ledger** setting (Clients page or Exports page) and a **year end month**.
+
+| Ledger | What you get | Status |
+|---|---|---|
+| Xero | Bank statement CSV: `*Date, *Amount, Payee, Description, Reference, Cheque Number`, money out negative | Layout as I know it. Verify with a test import. The existing draft bill posting is untouched. |
+| QuickBooks | 3 columns (Date, Description, Amount) or 4 columns (Date, Description, Credit, Debit), dates DD/MM/YYYY | Layout as I know it. Verify the date format against the QuickBooks region setting. |
+| SQL Account | Column mapping preset | **Draft template: verify before use** |
+| AutoCount | Column mapping preset | **Draft template: verify before use** |
+| Zoho Books | Column mapping preset | **Draft template: verify before use** |
+| Other | One CSV with every field | Final |
+
+The three draft presets live in one file, `lib/export/presets.ts`. They are placeholder column mappings, not vendor templates. They are labelled in the UI and the file name contains `DRAFT-template-verify-before-use`.
+
+**Vendor templates I need from you to finalise the drafts** (the sample import file or template the vendor's own import screen provides, with a filled example row):
+- **SQL Account:** the import template for bank or cash book transactions (or the payment voucher and official receipt import), including the exact account code and tax code format it expects.
+- **AutoCount:** the import template for bank transactions or the cash book entry (or payment voucher and official receipt import), with its tax code and account number format.
+- **Zoho Books:** the bank statement import sample CSV from Banking, Import statement, and how it wants categories and tax names (if it imports them at all).
+
+The **audit pack** (one ZIP): `reconciliation-statement.html` (open and print), `line-by-line.csv` (the rule or person behind each match), `client-questions-and-answers.csv`, `sign-off.csv`, `activity-log.csv`, the ledger CSV, and `source-statements/` with the PDFs where the browser still holds them. **Balance per books** is optional on the month page. If entered, the statement shows balance per bank, balance per books and the difference. If blank, it is titled "Bank statement review summary" and has no books section. DocFlow never invents a books balance.
+
+**Statement PDFs** are kept in this browser's IndexedDB only, up to 15 MB per file and 60 MB in total, with a friendly message when full. **Reset demo** wipes them. **Remove file** on a statement deletes the PDF and keeps the parsed figures.
+
+**Year-end mode** (`/year-end`): per client and account for a financial year: months proven, missing, with breaks, reconciled and approved. One **Year-end pack** ZIP holds a folder of audit pack files for each approved month plus a summary listing the months not yet approved and why. Up to twelve statements can be uploaded at once.
+
 ## Draft translations that need a native speaker
 
 All client-facing wording is in one file: `lib/chase/templates.ts`. These are drafts and the screen shows a warning until `draft` is set to false:
@@ -73,6 +99,6 @@ All client-facing wording is in one file: `lib/chase/templates.ts`. These are dr
 3. **Translations:** the drafts listed above.
 4. **More real statements.** The parser has been checked against one real digital layout. Other banks may need tuning. Send redacted samples.
 5. **Recurring documents** (`RECURRING_CATEGORIES` in `lib/config.ts`): Rent, Utilities, Telephone and internet, plus Bank statement. A category counts when it appeared in 2 of the previous 3 months. Tell me if you want different categories or rules.
-6. **Chase then Blocked.** Chasing a waiting client after the cutoff turns the cell Blocked straight away, because the rule is "chased and past the 5th". Say if you want a grace period after a chase.
+6. **Chase grace period.** After a chase a missing statement stays "Chased on [date], waiting" for `CHASE_GRACE_DAYS` (3) and only then can turn Blocked (also needs the 5th to have passed). Chasing again restarts it.
 7. **Money-in lines** that name an invoice are proposed as "Sales receipts" and always need a person to confirm.
 8. **Business mode** approves in one step ("Mark month done" by You).
