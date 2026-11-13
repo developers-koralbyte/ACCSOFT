@@ -1,0 +1,484 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDocflow } from "@/lib/store";
+import { fmtDate, fmtRM, monthName, monthOf, parseSen, senToPlain } from "@/lib/money";
+import { proveStatement, correctLine } from "@/lib/statements/proof";
+import { checkContinuity } from "@/lib/statements/continuity";
+import { ingestPdf, type LivePage } from "@/lib/statements/ingest";
+import { loadBrowserPdfjs, PdfPasswordError } from "@/lib/statements/pdf";
+import { duplicateMessage, toStatement } from "@/lib/statements/build";
+import type { ProofResult, Statement, StatementKind } from "@/lib/statements/types";
+import expected from "@/data/sample-expected.json";
+
+const GUARANTEE =
+  "If DocFlow cannot tie a statement to the cent or point to the exact line that breaks, that client's month is free.";
+
+const SAMPLES = Object.entries(expected).map(([id, e]) => ({
+  id,
+  file: e.file,
+  title: e.title,
+  clientId: e.clientId,
+  layout: `Bank ${e.layout} layout`,
+}));
+
+interface Msg {
+  text: string;
+  level: "info" | "error" | "good";
+}
+interface Pending {
+  name: string;
+  data: Uint8Array;
+  clientId: string;
+  kind: StatementKind;
+  layout?: string;
+  reason: "need" | "wrong";
+}
+
+function toneOf(p: ProofResult): "ok" | "bad" | "amber" {
+  if (p.status === "proven") return "ok";
+  if (p.status === "break") return "bad";
+  return "amber";
+}
+
+export default function StatementsPage() {
+  const { state, update, mode } = useDocflow();
+  const [clientId, setClientId] = useState("");
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState(false);
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [password, setPassword] = useState("");
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const pdfjsRef = useRef<Awaited<ReturnType<typeof loadBrowserPdfjs>> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/statements/page")
+      .then((r) => r.json())
+      .then((j) => setLive(Boolean(j.live)))
+      .catch(() => setLive(false));
+  }, []);
+
+  const selected = state ? (mode === "business" ? "me" : clientId || state.clients[0]?.id || "") : "";
+  const mine = useMemo(
+    () =>
+      (state?.statements ?? [])
+        .filter((s) => s.clientId === selected)
+        .sort((a, b) => (a.periodEnd < b.periodEnd ? -1 : 1)),
+    [state, selected],
+  );
+  const issues = useMemo(() => checkContinuity(mine), [mine]);
+  // accounts with two or more statements and nothing wrong between them
+  const goodAccounts = useMemo(() => {
+    const groups = new Map<string, Statement[]>();
+    for (const s of mine) groups.set(s.accountKey, [...(groups.get(s.accountKey) ?? []), s]);
+    return Array.from(groups.entries())
+      .filter(([, list]) => list.length > 1 && !issues.some((i) => i.level !== "info" && i.statementIds.some((id) => list.some((s) => s.id === id))))
+      .map(([key, list]) => ({ key, last4: list[0].accountLast4, count: list.length, from: list[0].periodEnd, to: list[list.length - 1].periodEnd }));
+  }, [mine, issues]);
+
+  if (!state) return <main className="page">Loading...</main>;
+
+  const clientName = (id: string) => state.clients.find((c) => c.id === id)?.name ?? "this client";
+  const say = (text: string, level: Msg["level"] = "info") => setMsgs((m) => [...m, { text, level }]);
+
+  async function pdfjs() {
+    if (!pdfjsRef.current) pdfjsRef.current = await loadBrowserPdfjs();
+    return pdfjsRef.current;
+  }
+
+  async function extractPage(image: string): Promise<LivePage> {
+    const res = await fetch("/api/statements/page", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ image }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.page) throw new Error(json.error || "Page extraction failed");
+    return json.page as LivePage;
+  }
+
+  // One path for uploads, WhatsApp-sourced files and the bundled samples.
+  async function ingest(item: { name: string; data: Uint8Array; clientId: string; kind: StatementKind; layout?: string }, pw?: string) {
+    setBusy(true);
+    try {
+      const r = await ingestPdf(item.data, { pdfjs: await pdfjs(), password: pw, liveAvailable: live, extractPage });
+      if (r.kind === "needs-live") {
+        say(
+          `${item.name} looks like a scan or photo with no text layer. Reading scanned statements needs live extraction, which is not switched on in this demo. Try one of the sample statements below instead.`,
+          "error",
+        );
+        return;
+      }
+      if (r.kind === "unreadable") {
+        say(`${item.name}: ${r.reason} The balance proof needs the transaction table, so nothing was added.`, "error");
+        return;
+      }
+      const stmt = toStatement(r.draft, { clientId: item.clientId, fileName: item.name, kind: r.usedLive ? "scan" : item.kind, layout: item.layout });
+      const dup = duplicateMessage(state!.statements, stmt);
+      if (dup) {
+        say(dup, "info");
+        return;
+      }
+      update((s) => ({ ...s, statements: [...s.statements, stmt] }));
+      setOpen((o) => new Set(o).add(stmt.id));
+      if (item.clientId !== selected) setClientId(item.clientId);
+      const p = proveStatement(stmt);
+      say(
+        `${item.name}: read ${stmt.lines.length} lines for ${clientName(item.clientId)}. ${p.label}.`,
+        p.status === "break" ? "error" : "good",
+      );
+      stmt.warnings.forEach((w) => say(w, "info"));
+    } catch (err) {
+      if (err instanceof PdfPasswordError) {
+        setPending({ ...item, reason: err.reason });
+        setPassword("");
+      } else {
+        say(`${item.name}: ${err instanceof Error ? err.message : "could not be read"}`, "error");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onFiles(files: FileList | null) {
+    if (!files) return;
+    setMsgs([]);
+    for (const f of Array.from(files)) {
+      if (!/\.pdf$/i.test(f.name)) {
+        say(`${f.name} is not a PDF. Bank statements are read from PDF files.`, "error");
+        continue;
+      }
+      await ingest({ name: f.name, data: new Uint8Array(await f.arrayBuffer()), clientId: selected, kind: "pdf-text" });
+    }
+  }
+
+  async function trySample(id: string) {
+    const sample = SAMPLES.find((x) => x.id === id);
+    if (!sample) return;
+    setMsgs([]);
+    const res = await fetch(`/samples/${sample.file}`);
+    if (!res.ok) return say("The sample file could not be loaded.", "error");
+    await ingest({
+      name: sample.file,
+      data: new Uint8Array(await res.arrayBuffer()),
+      clientId: mode === "business" ? "me" : sample.clientId,
+      kind: "sample",
+      layout: sample.layout,
+    });
+  }
+
+  async function unlock() {
+    if (!pending) return;
+    const p = pending;
+    const pw = password;
+    setPending(null);
+    setPassword(""); // the password is used once, in memory, and is never saved
+    await ingest(p, pw);
+  }
+
+  function patchStatement(id: string, fn: (s: Statement) => Statement) {
+    update((st) => ({ ...st, statements: st.statements.map((s) => (s.id === id ? fn(s) : s)) }));
+  }
+
+  return (
+    <main className="page">
+      <h1>Bank statements</h1>
+      <p className="sub">
+        Upload a bank statement PDF. It is read in your browser, then proven to the cent: opening balance plus money in,
+        less money out, must equal the closing balance, and every running balance must agree line by line.
+      </p>
+
+      {mode === "firm" && (
+        <div className="row">
+          <div>
+            <label>Client</label>
+            <select value={selected} onChange={(e) => setClientId(e.target.value)}>
+              {state.clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="drop">
+        <p style={{ margin: "0 0 12px" }}>
+          Choose one or more statement PDFs for <strong>{clientName(selected)}</strong>
+        </p>
+        <label className="btn" style={{ display: "inline-block", color: "#fff", margin: 0 }}>
+          {busy ? "Reading..." : "Choose PDF"}
+          <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} disabled={busy} onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
+        </label>
+        <p style={{ fontSize: 13, margin: "14px 0 0" }}>
+          Digital statements are read on your device, so there is no upload size limit and nothing is sent to a server. If a PDF is
+          password protected you will be asked for the password. It is used in this browser tab only and is never saved. Never share online banking logins: DocFlow does not need them.
+        </p>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <strong>Try a sample statement</strong>
+        <div className="bill-meta" style={{ margin: "2px 0 10px" }}>Fictional statements, generated as real PDFs, so the same upload path runs.</div>
+        <div className="chips">
+          {SAMPLES.map((s) => (
+            <button key={s.id} className="btn secondary" disabled={busy} onClick={() => trySample(s.id)}>{s.title}</button>
+          ))}
+        </div>
+      </div>
+
+      {pending && (
+        <div className="pw">
+          <strong>{pending.reason === "wrong" ? "That password did not work." : "This PDF is password protected."}</strong>
+          <div className="bill-meta" style={{ margin: "2px 0 10px" }}>
+            {pending.name}. The password unlocks the file in your browser only. It is not stored or sent anywhere.
+          </div>
+          <div className="row" style={{ marginBottom: 0 }}>
+            <div>
+              <label>PDF password</label>
+              <input type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && password && unlock()} />
+            </div>
+            <button className="btn" disabled={!password || busy} onClick={unlock}>Unlock</button>
+            <button className="btn secondary" onClick={() => { setPending(null); setPassword(""); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {msgs.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          {msgs.map((m, i) => (
+            <div key={i} className={`issue ${m.level === "error" ? "error" : m.level === "good" ? "good" : "info"}`}>{m.text}</div>
+          ))}
+        </div>
+      )}
+
+      <div className="section-head">
+        <h2 style={{ fontSize: 18 }}>{clientName(selected)}: statements</h2>
+      </div>
+
+      {(goodAccounts.length > 0 || issues.length > 0) && (
+        <div style={{ marginBottom: 16 }}>
+          {goodAccounts.map((g) => (
+            <div key={g.key} className="issue good">
+              Continuity, account ending {g.last4}: {g.count} statements run on unbroken from {monthName(monthOf(g.from))} to {monthName(monthOf(g.to))}. Each month opens at exactly the previous month&apos;s closing balance.
+            </div>
+          ))}
+          {issues.map((i, n) => (
+            <div key={n} className={`issue ${i.level}`}>{i.message}</div>
+          ))}
+        </div>
+      )}
+
+      {mine.length === 0 ? (
+        <div className="card empty">No statements for this client yet. Upload a PDF or try a sample above.</div>
+      ) : (
+        mine.map((s) => (
+          <StatementCard
+            key={s.id}
+            stmt={s}
+            expanded={open.has(s.id)}
+            toggle={() => setOpen((o) => { const n = new Set(o); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })}
+            patch={(fn) => patchStatement(s.id, fn)}
+            remove={() => update((st) => ({ ...st, statements: st.statements.filter((x) => x.id !== s.id) }))}
+          />
+        ))
+      )}
+      <p className="guarantee">{GUARANTEE}</p>
+    </main>
+  );
+}
+
+function StatementCard({
+  stmt,
+  expanded,
+  toggle,
+  patch,
+  remove,
+}: {
+  stmt: Statement;
+  expanded: boolean;
+  toggle: () => void;
+  patch: (fn: (s: Statement) => Statement) => void;
+  remove: () => void;
+}) {
+  const proof = useMemo(() => proveStatement(stmt), [stmt]);
+  const tone = toneOf(proof);
+  const [editing, setEditing] = useState<{ id: string; debit: string; credit: string } | null>(null);
+  const [editErr, setEditErr] = useState("");
+  const [flash, setFlash] = useState<string | null>(null);
+  const [opening, setOpening] = useState("");
+  const [closing, setClosing] = useState("");
+
+  function jump(lineId: string) {
+    const el = document.getElementById(`ln-${stmt.id}-${lineId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFlash(lineId);
+    setTimeout(() => setFlash(null), 1800);
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+    const debit = editing.debit.trim() === "" ? 0 : parseSen(editing.debit);
+    const credit = editing.credit.trim() === "" ? 0 : parseSen(editing.credit);
+    if (debit === null || credit === null || debit < 0 || credit < 0) return setEditErr("Enter amounts like 1250.00");
+    if (debit > 0 && credit > 0) return setEditErr("A line is either money in or money out, not both.");
+    const side = credit > 0 ? "credit" : "debit";
+    patch((s) => ({ ...s, lines: correctLine(s.lines, editing.id, side, side === "credit" ? credit : debit) }));
+    setEditing(null);
+    setEditErr("");
+  }
+
+  function saveBalances() {
+    const o = opening.trim() ? parseSen(opening) : stmt.opening;
+    const c = closing.trim() ? parseSen(closing) : stmt.closing;
+    if (o === null && opening.trim() === "" && stmt.opening === null) return;
+    patch((s) => ({ ...s, opening: o ?? s.opening, closing: c ?? s.closing }));
+  }
+
+  const breakByLine = new Map(proof.breaks.map((b) => [b.lineId, b]));
+
+  return (
+    <div className="card bill">
+      <div className="stmt-head" onClick={toggle}>
+        <div>
+          <h3>
+            {stmt.bank} <span className="bill-meta">account ending {stmt.accountLast4}</span>
+            {stmt.layout && <span className="tag" style={{ marginLeft: 8 }}>{stmt.layout}</span>}
+            {stmt.kind === "sample" && <span className="tag" style={{ marginLeft: 8 }}>Sample</span>}
+          </h3>
+          <div className="bill-meta">
+            {fmtDate(stmt.periodStart)} to {fmtDate(stmt.periodEnd)} | {stmt.lines.length} lines | {stmt.fileName}
+          </div>
+        </div>
+        <span className={`tag ${proof.status === "proven" ? "ok" : proof.status === "break" ? "" : "warn"}`} style={proof.status === "break" ? { background: "#fee2e2", color: "var(--bad)" } : undefined}>
+          {proof.label}
+        </span>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop: 14 }}>
+          <div className={`proof ${tone}`}>
+            <div className="proof-badge"><span className="dot" />{proof.label}</div>
+            <p style={{ margin: "6px 0 0" }}>{proof.detail}</p>
+            {proof.status === "break" && proof.breaks.length > 0 && (
+              <p style={{ margin: "8px 0 0" }}>
+                {proof.breaks.map((b) => (
+                  <button key={b.lineId} className="linkbtn" style={{ marginRight: 14 }} onClick={() => jump(b.lineId)}>
+                    Jump to line {b.lineNo}
+                  </button>
+                ))}
+              </p>
+            )}
+            {proof.opening !== null && proof.closing !== null && (
+              <div className="proof-sum">
+                <div><div className="n">{fmtRM(proof.opening)}</div><div className="l">Opening balance</div></div>
+                <div><div className="n">+ {fmtRM(proof.totalCredit)}</div><div className="l">Money in</div></div>
+                <div><div className="n">- {fmtRM(proof.totalDebit)}</div><div className="l">Money out</div></div>
+                <div><div className="n">= {fmtRM(proof.computedClosing ?? 0)}</div><div className="l">Calculated closing</div></div>
+                <div><div className="n">{fmtRM(proof.closing)}</div><div className="l">Closing on statement</div></div>
+              </div>
+            )}
+            {(proof.printed.debit || proof.printed.credit) && (
+              <p className="bill-meta" style={{ margin: "10px 0 0" }}>
+                Printed totals on the statement:{" "}
+                {proof.printed.debit && <>money out {fmtRM(proof.printed.debit.printed)} {proof.printed.debit.ok ? "(agrees with the lines)" : "(does NOT agree with the lines)"}</>}
+                {proof.printed.debit && proof.printed.credit && "; "}
+                {proof.printed.credit && <>money in {fmtRM(proof.printed.credit.printed)} {proof.printed.credit.ok ? "(agrees with the lines)" : "(does NOT agree with the lines)"}</>}
+              </p>
+            )}
+            <p className="guarantee">{GUARANTEE}</p>
+          </div>
+
+          {proof.status === "incomplete" && (
+            <div className="row" style={{ marginTop: 14 }}>
+              <div><label>Opening balance (RM)</label><input placeholder={stmt.opening === null ? "e.g. 18250.40" : senToPlain(stmt.opening)} value={opening} onChange={(e) => setOpening(e.target.value)} /></div>
+              <div><label>Closing balance (RM)</label><input placeholder={stmt.closing === null ? "e.g. 11503.68" : senToPlain(stmt.closing)} value={closing} onChange={(e) => setClosing(e.target.value)} /></div>
+              <button className="btn" onClick={saveBalances}>Run the proof</button>
+            </div>
+          )}
+
+          {stmt.warnings.length > 0 && stmt.warnings.map((w, i) => <div key={i} className="issue info" style={{ marginTop: 10 }}>{w}</div>)}
+
+          <div style={{ overflowX: "auto", marginTop: 14 }}>
+            <table className="lines">
+              <thead>
+                <tr><th>#</th><th>Date</th><th>Description</th><th className="num">Money out</th><th className="num">Money in</th><th className="num">Balance</th><th>Page</th><th /></tr>
+              </thead>
+              <tbody>
+                {stmt.lines.map((l, i) => {
+                  const b = breakByLine.get(l.id);
+                  const isEditing = editing?.id === l.id;
+                  return (
+                    <FragmentRows key={l.id}>
+                      <tr id={`ln-${stmt.id}-${l.id}`} className={`${b ? "break" : ""} ${flash === l.id ? "flash" : ""}`}>
+                        <td>{i + 1}</td>
+                        <td>{fmtDate(l.date)}</td>
+                        <td className="desc">
+                          {l.description}
+                          {l.corrected && <div className="bill-meta">Edited by you. The statement printed {l.corrected.debit ? `${fmtRM(l.corrected.debit)} out` : `${fmtRM(l.corrected.credit)} in`}.</div>}
+                          {l.directionInferred && <div className="bill-meta">Direction read from the balance change.</div>}
+                        </td>
+                        {isEditing ? (
+                          <>
+                            <td className="num"><input aria-label="Money out" value={editing.debit} onChange={(e) => setEditing({ ...editing, debit: e.target.value })} /></td>
+                            <td className="num"><input aria-label="Money in" value={editing.credit} onChange={(e) => setEditing({ ...editing, credit: e.target.value })} /></td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="num">{l.debit ? fmtRM(l.debit) : ""}</td>
+                            <td className="num">{l.credit ? fmtRM(l.credit) : ""}</td>
+                          </>
+                        )}
+                        <td className="num">{l.balance === null ? "" : fmtRM(l.balance)}</td>
+                        <td>{l.page}</td>
+                        <td className="num">
+                          {isEditing ? (
+                            <>
+                              <button className="linkbtn" onClick={saveEdit}>Save</button>{" "}
+                              <button className="linkbtn" onClick={() => { setEditing(null); setEditErr(""); }}>Cancel</button>
+                            </>
+                          ) : (
+                            <button className="linkbtn" onClick={() => { setEditing({ id: l.id, debit: l.debit ? senToPlain(l.debit) : "", credit: l.credit ? senToPlain(l.credit) : "" }); setEditErr(""); }}>Edit</button>
+                          )}
+                        </td>
+                      </tr>
+                      {(b || (isEditing && editErr)) && (
+                        <tr className="break-note">
+                          <td />
+                          <td colSpan={7}>
+                            {isEditing && editErr ? editErr : (
+                              <>
+                                Break at line {b!.lineNo}: expected balance {fmtRM(b!.expected)}, statement shows {fmtRM(b!.found)}.
+                                {b!.implied && (
+                                  <>
+                                    {" "}The printed balance implies {b!.implied.side === "debit" ? "money out" : "money in"} of {fmtRM(b!.implied.amount)}.{" "}
+                                    <button className="linkbtn" onClick={() => patch((s) => ({ ...s, lines: correctLine(s.lines, l.id, b!.implied!.side, b!.implied!.amount) }))}>
+                                      Use {fmtRM(b!.implied.amount)}
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </FragmentRows>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="actions" style={{ marginTop: 12, justifyContent: "space-between" }}>
+            <span className="bill-meta">The proof re-runs after every correction.</span>
+            <button className="btn secondary" onClick={() => { if (confirm("Remove this statement from the demo?")) remove(); }}>Remove statement</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A keyed wrapper so one line can render a main row and a note row.
+function FragmentRows({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}

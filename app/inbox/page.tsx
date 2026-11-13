@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDocflow } from "@/lib/store";
 import { ACCOUNTS, TAX_CODES, flagsFor, money } from "@/lib/malaysia";
 import { billsToCsv, downloadCsv } from "@/lib/csv";
+import { fmtDate } from "@/lib/money";
 import type { Bill } from "@/lib/types";
 
 const SOURCE_LABEL: Record<Bill["source"], string> = {
@@ -145,7 +146,7 @@ export default function InboxPage() {
               <tbody>
                 {posted.map((b) => (
                   <tr key={b.id}>
-                    <td>{business ? b.date : clientName(b.clientId)}</td>
+                    <td>{business ? fmtDate(b.date) : clientName(b.clientId)}</td>
                     <td>{b.supplier}</td>
                     <td>{money(b.total, b.currency)}</td>
                     <td><span className="tag ok">{b.status === "posted" ? b.postedRef : "Approved"}</span></td>

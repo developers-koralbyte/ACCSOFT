@@ -1,3 +1,5 @@
+import type { Statement } from "./statements/types";
+
 export type Source = "whatsapp" | "upload" | "email";
 export type BillStatus = "pending" | "approved" | "posted";
 
@@ -46,4 +48,5 @@ export interface ExtractedBill {
 export interface AppState {
   clients: Client[];
   bills: Bill[];
+  statements: Statement[];
 }

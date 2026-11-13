@@ -48,6 +48,7 @@ export default function Nav() {
       <nav className="nav">
         {mode === "firm" ? link("/", "Clients") : link("/business", "My documents")}
         {link("/inbox", "Review queue")}
+        {link("/statements", "Bank statements")}
         {link("/upload", "Add documents")}
         {link("/import", "Import WhatsApp chat")}
       </nav>

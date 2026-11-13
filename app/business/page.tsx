@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { readMode, useDocflow } from "@/lib/store";
 import { billsToCsv, downloadCsv } from "@/lib/csv";
 import { money } from "@/lib/malaysia";
+import { fmtDate } from "@/lib/money";
 
 export default function BusinessPage() {
   const { state, reset } = useDocflow();
@@ -77,7 +78,7 @@ export default function BusinessPage() {
             <tbody>
               {bills.map((b) => (
                 <tr key={b.id}>
-                  <td>{b.date}</td>
+                  <td>{fmtDate(b.date)}</td>
                   <td>{b.supplier || "Unknown supplier"}</td>
                   <td>{b.account}</td>
                   <td>{money(b.total, b.currency)}</td>

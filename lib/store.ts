@@ -8,8 +8,8 @@ export type Mode = "firm" | "business";
 
 const MODE_KEY = "docflow-mode";
 const KEYS: Record<Mode, string> = {
-  firm: "docflow-state-v1",
-  business: "docflow-business-v1",
+  firm: "docflow-state-v2",
+  business: "docflow-business-v2",
 };
 
 export function readMode(): Mode {
@@ -32,7 +32,19 @@ function seed(mode: Mode): AppState {
   return mode === "business" ? seedBusinessState() : seedState();
 }
 
-// Demo storage lives in the browser. Replace with a database (for example Postgres on Vercel) before real client data goes in.
+// Saved data from an older build may lack newer collections. Fill them in so screens never see undefined.
+function normalise(raw: Partial<AppState>, mode: Mode): AppState {
+  const base = seed(mode);
+  return {
+    clients: raw.clients ?? base.clients,
+    bills: raw.bills ?? base.bills,
+    statements: raw.statements ?? [],
+  };
+}
+
+// ALL reads and writes of app data go through this module. Screens only call useDocflow(), so a real database
+// can replace localStorage here without touching any screen. Demo storage lives in the browser only; replace it
+// (for example with Postgres on Vercel) before real client data goes in.
 // Firm mode and business mode keep separate saved data so demo clients never mix with an SME's own documents.
 export function useDocflow() {
   const [state, setState] = useState<AppState | null>(null);
@@ -45,7 +57,7 @@ export function useDocflow() {
     setMode(m);
     try {
       const raw = window.localStorage.getItem(KEYS[m]);
-      setState(raw ? (JSON.parse(raw) as AppState) : seed(m));
+      setState(raw ? normalise(JSON.parse(raw) as Partial<AppState>, m) : seed(m));
     } catch {
       setState(seed(m));
     }

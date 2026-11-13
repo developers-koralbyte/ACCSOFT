@@ -18,11 +18,11 @@ function hash(s: string): number {
 }
 
 const DEMO_SUPPLIERS: [string, string, number, number][] = [
-  ["Popular Book Co (M) Sdn Bhd", "Stationery and printing supplies", 186.4, 0],
-  ["Grab Malaysia", "Business ride and delivery charges", 94.2, 0],
-  ["Microsoft Ireland Operations", "Microsoft 365 Business subscription", 312.0, 24.96],
-  ["Syarikat Air Selangor", "Water bill", 128.35, 0],
-  ["J&T Express Malaysia", "Courier charges", 77.0, 6.16],
+  ["Kedai Buku Harapan Sdn Bhd", "Stationery and printing supplies", 186.4, 0],
+  ["Larian Ride Services", "Business ride and delivery charges", 94.2, 0],
+  ["Cloudwork Software Ltd", "Business software subscription", 312.0, 24.96],
+  ["Syarikat Air Bersih", "Water bill", 128.35, 0],
+  ["Pantas Courier Express", "Courier charges", 77.0, 6.16],
 ];
 
 export function demoExtract(fileName: string): ExtractedBill {
